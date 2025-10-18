@@ -1,45 +1,39 @@
-FROM python:3.11
-
-# Create and use a non-root user (optional)
-RUN useradd -m -u 1000 user
-USER user
-ENV PATH="/home/user/.local/bin:$PATH"
+# HuggingFace Spaces Dockerfile for Cooking Tutor API
+FROM python:3.9-slim
 
 # Set working directory
 WORKDIR /app
 
-# Copy all project files to the container
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
 COPY . .
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Create non-root user for security
+RUN useradd -m -u 1000 user && chown -R user:user /app
+USER user
 
-# Verify CSV file is present and accessible
-RUN ls -la /app/utils/symbipredict_2022.csv || echo "CSV file not found"
-
-# Test CSV loading in Docker environment
-RUN python /app/test_docker_csv.py
-
-# Clean up test file
-RUN rm /app/test_docker_csv.py
-
-# Set Hugging Face cache directory to persist model downloads
-ENV HF_HOME="/home/user/.cache/huggingface"
-ENV SENTENCE_TRANSFORMERS_HOME="/home/user/.cache/huggingface/sentence-transformers"
-ENV MEDGEMMA_HOME="/home/user/.cache/huggingface/sentence-transformers"
-
-# Create cache directories and ensure permissions
-RUN mkdir -p /app/model_cache /home/user/.cache/huggingface/sentence-transformers && \
-    chown -R user:user /app/model_cache /home/user/.cache/huggingface
-
-# Pre-load model in a separate script
-RUN python /app/models/download_model.py && python /app/models/warmup.py
-
-# Ensure ownership and permissions remain intact
-RUN chown -R user:user /app/model_cache
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
 
 # Expose port
 EXPOSE 7860
 
-# Run the application using main.py as entry point
-CMD ["python", "main.py"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:7860/health || exit 1
+
+# Run the application
+CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "7860"]
