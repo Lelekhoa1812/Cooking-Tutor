@@ -92,7 +92,7 @@ class EnhancedContentProcessor:
         return comprehensive_summary, reference_mapping
     
     def _extract_structured_information(self, sources: List[Dict], user_query: str) -> Dict[str, List[Dict]]:
-        """Extract structured information by medical categories"""
+        """Extract structured information by cooking categories"""
         structured_info = defaultdict(list)
         
         for source in sources:
@@ -100,8 +100,8 @@ class EnhancedContentProcessor:
             if not content:
                 continue
             
-            # Extract information by medical categories
-            for category, patterns in self.medical_patterns.items():
+            # Extract information by cooking categories
+            for category, patterns in self.cooking_patterns.items():
                 extracted_info = self._extract_category_info(content, patterns, category, user_query)
                 if extracted_info:
                     structured_info[category].append({

@@ -10,57 +10,59 @@ logger = logging.getLogger(__name__)
 DetectorFactory.seed = 0
 
 class LanguageProcessor:
-    """Process and enhance queries for multilingual medical search"""
+    """Process and enhance queries for multilingual cooking search"""
     
     def __init__(self):
-        # Medical keywords in different languages
-        self.medical_keywords = {
+        # Cooking keywords in different languages
+        self.cooking_keywords = {
             'en': [
-                'symptom', 'symptoms', 'pain', 'headache', 'migraine', 'fever', 'cough',
-                'treatment', 'treatments', 'medicine', 'medication', 'drug', 'therapy',
-                'diagnosis', 'diagnose', 'condition', 'disease', 'disorder', 'syndrome',
-                'doctor', 'physician', 'medical', 'health', 'clinical', 'patient',
-                'blood pressure', 'heart', 'lung', 'stomach', 'back', 'neck', 'chest',
-                'allergy', 'allergies', 'infection', 'inflammation', 'swelling', 'rash',
-                'sleep', 'insomnia', 'anxiety', 'depression', 'stress', 'mental health',
-                'pregnancy', 'baby', 'child', 'elderly', 'senior', 'age', 'covid',
-                'vaccine', 'immunization', 'surgery', 'operation', 'hospital', 'clinic'
+                'recipe', 'cooking', 'baking', 'roasting', 'grilling', 'frying', 'boiling', 'steaming',
+                'ingredients', 'seasoning', 'spices', 'herbs', 'sauce', 'marinade', 'dressing',
+                'technique', 'method', 'temperature', 'timing', 'preparation', 'cooking time',
+                'oven', 'stovetop', 'grill', 'pan', 'pot', 'skillet', 'knife', 'cutting',
+                'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'paleo', 'diet',
+                'appetizer', 'main course', 'dessert', 'breakfast', 'lunch', 'dinner',
+                'cuisine', 'italian', 'chinese', 'mexican', 'french', 'indian', 'thai',
+                'substitution', 'alternative', 'variation', 'modification', 'adaptation',
+                'troubleshooting', 'tips', 'tricks', 'hacks', 'mistakes', 'common errors'
             ],
             'vi': [
-                'triệu chứng', 'đau', 'đau đầu', 'đau nửa đầu', 'sốt', 'ho',
-                'điều trị', 'thuốc', 'dược phẩm', 'liệu pháp', 'chẩn đoán',
-                'bệnh', 'tình trạng', 'rối loạn', 'hội chứng', 'bác sĩ', 'y tế',
-                'sức khỏe', 'lâm sàng', 'bệnh nhân', 'huyết áp', 'tim', 'phổi',
-                'dạ dày', 'lưng', 'cổ', 'ngực', 'dị ứng', 'nhiễm trùng',
-                'viêm', 'sưng', 'phát ban', 'ngủ', 'mất ngủ', 'lo âu',
-                'trầm cảm', 'căng thẳng', 'sức khỏe tâm thần', 'mang thai',
-                'em bé', 'trẻ em', 'người già', 'tuổi tác', 'covid', 'vaccine',
-                'tiêm chủng', 'phẫu thuật', 'bệnh viện', 'phòng khám'
+                'công thức', 'nấu ăn', 'nướng', 'rang', 'nướng vỉ', 'chiên', 'luộc', 'hấp',
+                'nguyên liệu', 'gia vị', 'thảo mộc', 'nước sốt', 'tẩm ướp', 'dressing',
+                'kỹ thuật', 'phương pháp', 'nhiệt độ', 'thời gian', 'chuẩn bị', 'thời gian nấu',
+                'lò nướng', 'bếp', 'vỉ nướng', 'chảo', 'nồi', 'dao', 'cắt',
+                'chay', 'thuần chay', 'không gluten', 'không sữa', 'keto', 'paleo',
+                'khai vị', 'món chính', 'tráng miệng', 'sáng', 'trưa', 'tối',
+                'ẩm thực', 'ý', 'trung', 'mexico', 'pháp', 'ấn', 'thái',
+                'thay thế', 'biến tấu', 'sửa đổi', 'thích ứng',
+                'khắc phục', 'mẹo', 'thủ thuật', 'lỗi thường gặp'
             ],
             'zh': [
-                '症状', '疼痛', '头痛', '偏头痛', '发烧', '咳嗽', '治疗', '药物',
-                '药品', '疗法', '诊断', '疾病', '状况', '紊乱', '综合征', '医生',
-                '医疗', '健康', '临床', '患者', '血压', '心脏', '肺', '胃',
-                '背部', '颈部', '胸部', '过敏', '感染', '炎症', '肿胀', '皮疹',
-                '睡眠', '失眠', '焦虑', '抑郁', '压力', '心理健康', '怀孕',
-                '婴儿', '儿童', '老年人', '年龄', '新冠', '疫苗', '免疫',
-                '手术', '医院', '诊所'
+                '食谱', '烹饪', '烘焙', '烤', '烧烤', '炸', '煮', '蒸',
+                '食材', '调料', '香料', '香草', '酱汁', '腌料', '调料',
+                '技巧', '方法', '温度', '时间', '准备', '烹饪时间',
+                '烤箱', '炉灶', '烤架', '平底锅', '锅', '刀', '切',
+                '素食', '纯素', '无麸质', '无乳制品', '生酮', '古法',
+                '开胃菜', '主菜', '甜点', '早餐', '午餐', '晚餐',
+                '菜系', '意大利', '中国', '墨西哥', '法国', '印度', '泰国',
+                '替代', '变化', '修改', '适应',
+                '故障排除', '技巧', '窍门', '常见错误'
             ]
         }
         
         # Language-specific search enhancements
         self.language_enhancements = {
             'vi': {
-                'common_terms': ['là gì', 'nguyên nhân', 'cách điều trị', 'triệu chứng'],
-                'medical_context': ['y tế', 'sức khỏe', 'bệnh viện', 'bác sĩ']
+                'common_terms': ['là gì', 'cách nấu', 'công thức', 'nguyên liệu'],
+                'cooking_context': ['nấu ăn', 'ẩm thực', 'bếp', 'đầu bếp']
             },
             'zh': {
-                'common_terms': ['是什么', '原因', '治疗方法', '症状'],
-                'medical_context': ['医疗', '健康', '医院', '医生']
+                'common_terms': ['是什么', '怎么做', '食谱', '食材'],
+                'cooking_context': ['烹饪', '美食', '厨房', '厨师']
             },
             'en': {
-                'common_terms': ['what is', 'causes', 'treatment', 'symptoms'],
-                'medical_context': ['medical', 'health', 'hospital', 'doctor']
+                'common_terms': ['what is', 'how to cook', 'recipe', 'ingredients'],
+                'cooking_context': ['cooking', 'culinary', 'kitchen', 'chef']
             }
         }
     
@@ -136,16 +138,16 @@ class LanguageProcessor:
         """Enhance query for a specific language"""
         enhancements = self.language_enhancements.get(language, {})
         common_terms = enhancements.get('common_terms', [])
-        medical_context = enhancements.get('medical_context', [])
+        cooking_context = enhancements.get('cooking_context', [])
         
-        # Check if query already contains medical context
+        # Check if query already contains cooking context
         query_lower = query.lower()
-        has_medical_context = any(term in query_lower for term in medical_context)
+        has_cooking_context = any(term in query_lower for term in cooking_context)
         
-        # If no medical context, add it
-        if not has_medical_context and medical_context:
-            # Add the most relevant medical context term
-            query += f" {medical_context[0]}"
+        # If no cooking context, add it
+        if not has_cooking_context and cooking_context:
+            # Add the most relevant cooking context term
+            query += f" {cooking_context[0]}"
         
         # Check if query is a question and add relevant terms
         if any(term in query_lower for term in ['là gì', '是什么', 'what is', 'how', 'tại sao', '为什么', 'why']):
@@ -155,62 +157,58 @@ class LanguageProcessor:
         return query.strip()
     
     def _translate_query(self, query: str, source_lang: str, target_lang: str) -> str:
-        """Simple keyword-based translation for medical terms"""
+        """Simple keyword-based translation for cooking terms"""
         # This is a basic implementation - in production, you'd use a proper translation service
         
-        # Medical term translations
+        # Cooking term translations
         translations = {
             ('vi', 'en'): {
-                'triệu chứng': 'symptoms',
-                'đau': 'pain',
-                'đau đầu': 'headache',
-                'sốt': 'fever',
-                'ho': 'cough',
-                'điều trị': 'treatment',
-                'thuốc': 'medicine',
-                'bệnh': 'disease',
-                'bác sĩ': 'doctor',
-                'sức khỏe': 'health',
-                'bệnh viện': 'hospital'
+                'công thức': 'recipe',
+                'nấu ăn': 'cooking',
+                'nguyên liệu': 'ingredients',
+                'gia vị': 'seasoning',
+                'kỹ thuật': 'technique',
+                'nướng': 'baking',
+                'chiên': 'frying',
+                'luộc': 'boiling',
+                'hấp': 'steaming',
+                'nước sốt': 'sauce'
             },
             ('zh', 'en'): {
-                '症状': 'symptoms',
-                '疼痛': 'pain',
-                '头痛': 'headache',
-                '发烧': 'fever',
-                '咳嗽': 'cough',
-                '治疗': 'treatment',
-                '药物': 'medicine',
-                '疾病': 'disease',
-                '医生': 'doctor',
-                '健康': 'health',
-                '医院': 'hospital'
+                '食谱': 'recipe',
+                '烹饪': 'cooking',
+                '食材': 'ingredients',
+                '调料': 'seasoning',
+                '技巧': 'technique',
+                '烘焙': 'baking',
+                '炸': 'frying',
+                '煮': 'boiling',
+                '蒸': 'steaming',
+                '酱汁': 'sauce'
             },
             ('en', 'vi'): {
-                'symptoms': 'triệu chứng',
-                'pain': 'đau',
-                'headache': 'đau đầu',
-                'fever': 'sốt',
-                'cough': 'ho',
-                'treatment': 'điều trị',
-                'medicine': 'thuốc',
-                'disease': 'bệnh',
-                'doctor': 'bác sĩ',
-                'health': 'sức khỏe',
-                'hospital': 'bệnh viện'
+                'recipe': 'công thức',
+                'cooking': 'nấu ăn',
+                'ingredients': 'nguyên liệu',
+                'seasoning': 'gia vị',
+                'technique': 'kỹ thuật',
+                'baking': 'nướng',
+                'frying': 'chiên',
+                'boiling': 'luộc',
+                'steaming': 'hấp',
+                'sauce': 'nước sốt'
             },
             ('en', 'zh'): {
-                'symptoms': '症状',
-                'pain': '疼痛',
-                'headache': '头痛',
-                'fever': '发烧',
-                'cough': '咳嗽',
-                'treatment': '治疗',
-                'medicine': '药物',
-                'disease': '疾病',
-                'doctor': '医生',
-                'health': '健康',
-                'hospital': '医院'
+                'recipe': '食谱',
+                'cooking': '烹饪',
+                'ingredients': '食材',
+                'seasoning': '调料',
+                'technique': '技巧',
+                'baking': '烘焙',
+                'frying': '炸',
+                'boiling': '煮',
+                'steaming': '蒸',
+                'sauce': '酱汁'
             }
         }
         
@@ -223,12 +221,12 @@ class LanguageProcessor:
         
         return translated_query
     
-    def get_medical_relevance_score(self, text: str, language: str) -> float:
-        """Calculate medical relevance score for text in a specific language"""
+    def get_cooking_relevance_score(self, text: str, language: str) -> float:
+        """Calculate cooking relevance score for text in a specific language"""
         if not text:
             return 0.0
         
-        keywords = self.medical_keywords.get(language, [])
+        keywords = self.cooking_keywords.get(language, [])
         if not keywords:
             return 0.0
         

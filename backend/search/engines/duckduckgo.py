@@ -143,11 +143,11 @@ class DuckDuckGoEngine:
             return ' '.join(words[:3])  # Max 3 words
     
     def _filter_irrelevant_sources(self, results: List[Dict]) -> List[Dict]:
-        """Filter out irrelevant sources like generic health pages, quizzes, etc."""
+        """Filter out irrelevant sources like generic pages, quizzes, etc."""
         import re
         filtered = []
         
-        # Only exclude obvious non-medical content
+        # Only exclude obvious non-cooking content
         exclude_patterns = [
             r'/quiz$',  # Quiz pages (end of URL)
             r'/test$',  # Test pages (end of URL)
@@ -325,7 +325,7 @@ class DuckDuckGoEngine:
                 'format': 'json',
                 'no_html': '1',
                 'skip_disambig': '1',
-                't': 'MedicalChatbot'
+                't': 'CookingTutor'
             }
             
             response = self.session.get(url, params=params, timeout=self.timeout)

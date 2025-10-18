@@ -7,6 +7,7 @@ from .engines.duckduckgo import DuckDuckGoEngine
 from .engines.cooking import CookingSearchEngine
 from .engines.multilingual import MultilingualCookingEngine
 from .engines.video import VideoSearchEngine
+from .engines.image import ImageSearchEngine
 from .extractors.content import ContentExtractor
 from .processors.cooking import CookingSearchProcessor
 from .processors.language import LanguageProcessor
@@ -27,6 +28,7 @@ class SearchCoordinator:
         self.cooking_engine = CookingSearchEngine()
         self.multilingual_engine = MultilingualCookingEngine()
         self.video_engine = VideoSearchEngine()
+        self.image_engine = ImageSearchEngine()
         
         # Initialize processors
         self.content_extractor = ContentExtractor()
@@ -105,7 +107,7 @@ class SearchCoordinator:
         return summary, url_mapping
     
     def _search_multilingual(self, query: str, num_results: int, language: str = None) -> List[Dict]:
-        """Search using multilingual medical engine"""
+        """Search using multilingual cooking engine"""
         try:
             if language:
                 results = self.multilingual_engine.search_by_language(query, language, num_results)
@@ -454,6 +456,31 @@ class SearchCoordinator:
         
         logger.info(f"Video search completed: {len(video_results)} videos found")
         return video_results
+    
+    def image_search(self, query: str, num_results: int = 3, target_language: str = None) -> List[Dict]:
+        """Search for cooking-related images"""
+        logger.info(f"Image search for: {query} (target: {target_language})")
+        
+        # Detect language if not provided
+        if not target_language:
+            target_language = self.language_processor.detect_language(query)
+        
+        # Map language codes
+        lang_mapping = {
+            'EN': 'en',
+            'VI': 'vi', 
+            'ZH': 'zh',
+            'en': 'en',
+            'vi': 'vi',
+            'zh': 'zh'
+        }
+        search_language = lang_mapping.get(target_language, 'en')
+        
+        # Search for images
+        image_results = self.image_engine.search_cooking_images(query, num_results, search_language)
+        
+        logger.info(f"Image search completed: {len(image_results)} images found")
+        return image_results
 
     def _sanitize_video_results(self, results: List[Dict], limit: int = 4) -> List[Dict]:
         """Ensure each video has a valid absolute https URL, reasonable title, and platform metadata.

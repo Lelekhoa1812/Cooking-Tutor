@@ -4,6 +4,7 @@ import time
 import hashlib
 from .engines.duckduckgo import DuckDuckGoEngine
 from .engines.video import VideoSearchEngine
+from .engines.image import ImageSearchEngine
 from .coordinator import SearchCoordinator
 # Reranker removed - using simple relevance scoring for cooking content
 from models import summarizer
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 # Global instances
 _duckduckgo_engine = None
 _video_engine = None
+_image_engine = None
 _reranker = None
 _search_coordinator = None
 
@@ -33,6 +35,13 @@ def get_video_engine() -> VideoSearchEngine:
     if _video_engine is None:
         _video_engine = VideoSearchEngine()
     return _video_engine
+
+def get_image_engine() -> ImageSearchEngine:
+    """Get or create the global image engine instance"""
+    global _image_engine
+    if _image_engine is None:
+        _image_engine = ImageSearchEngine()
+    return _image_engine
 
 def get_reranker():
     """Simple cooking relevance scorer - no complex reranking needed"""
@@ -237,8 +246,20 @@ def search_videos(query: str, num_results: int = 2, target_language: str = None)
         logger.error(f"Video search failed: {e}")
         return []
 
+# Image search function
+def search_images(query: str, num_results: int = 3, target_language: str = None) -> List[Dict]:
+    """Search for cooking-related images"""
+    try:
+        # Clean the query first
+        cleaned_query = _clean_search_query(query)
+        coordinator = get_search_coordinator()
+        return coordinator.image_search(cleaned_query, num_results, target_language)
+    except Exception as e:
+        logger.error(f"Image search failed: {e}")
+        return []
+
 # Comprehensive search function with maximum information extraction
-def search_comprehensive(query: str, num_results: int = 15, target_language: str = None, include_videos: bool = True) -> Tuple[str, Dict[int, str], Dict]:
+def search_comprehensive(query: str, num_results: int = 15, target_language: str = None, include_videos: bool = True, include_images: bool = True) -> Tuple[str, Dict[int, str], Dict]:
     """Comprehensive search with maximum information extraction and detailed references"""
     logger.info(f"Starting comprehensive search for: {query} (target: {target_language})")
     
@@ -299,8 +320,20 @@ def search_comprehensive(query: str, num_results: int = 15, target_language: str
         except Exception as e:
             logger.warning(f"Video search failed: {e}")
     
+    # Search for images if requested
+    image_results = []
+    if include_images:
+        try:
+            image_engine = get_image_engine()
+            # Limit image results to avoid over-fetching
+            max_image_results = min(3, num_results // 5)  # Max 3 or 1/5 of total
+            image_results = image_engine.search_cooking_images(boosted_query, max_image_results, search_language)
+            logger.info(f"Found {len(image_results)} image results")
+        except Exception as e:
+            logger.warning(f"Image search failed: {e}")
+    
     # Combine all results
-    all_results = text_results + video_results
+    all_results = text_results + video_results + image_results
     
     # Simple cooking relevance filtering
     if all_results:
@@ -351,7 +384,10 @@ def search_comprehensive(query: str, num_results: int = 15, target_language: str
         'total_sources': len(all_results),
         'text_sources': len(text_results),
         'video_sources': len(video_results),
-        'sources': all_results
+        'image_sources': len(image_results),
+        'sources': all_results,
+        'videos': video_results,
+        'images': image_results
     }
     
     logger.info(f"Comprehensive search completed: {len(all_results)} total sources")

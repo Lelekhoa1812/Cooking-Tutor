@@ -50,13 +50,6 @@ class VideoSearchEngine:
                     'selectors': ['a#video-title', 'a[href*="/watch?v="]'],
                     'base_url': 'https://www.youtube.com'
                 },
-                {
-                    'name': 'vinmec_videos',
-                    'search_url': 'https://www.vinmec.com/vi/tim-kiem',
-                    'params': {'q': ''},
-                    'selectors': ['a[href*="/video/"]', 'a[href*="/suc-khoe/"]'],
-                    'base_url': 'https://www.vinmec.com'
-                }
             ],
             'zh': [
                 {
@@ -87,8 +80,8 @@ class VideoSearchEngine:
         q = re.sub(r"\s+", " ", q)
         return q.strip()
 
-    def _is_valid_medical_video(self, result: Dict, query: str) -> bool:
-        """Check if video is medically relevant and has valid URL"""
+    def _is_valid_cooking_video(self, result: Dict, query: str) -> bool:
+        """Check if video is cooking-relevant and has valid URL"""
         url = result.get('url', '')
         title = result.get('title', '')
         
@@ -96,25 +89,23 @@ class VideoSearchEngine:
         if 'results?search_query=' in url:
             return False
         
-        # Skip non-YouTube URLs that aren't medical platforms
-        if 'youtube.com' not in url and not any(med in url for med in ['medscape.com', 'vinmec.com', 'haodf.com']):
+        # Skip non-YouTube URLs that aren't cooking platforms
+        if 'youtube.com' not in url and not any(cook in url for cook in ['allrecipes.com', 'foodnetwork.com', 'epicurious.com', 'seriouseats.com']):
             return False
         
-        # Check if title contains medical keywords or query terms
+        # Check if title contains cooking keywords or query terms
         title_lower = title.lower()
         query_lower = query.lower()
         
-        medical_keywords = [
-            'medical', 'health', 'doctor', 'treatment', 'diagnosis',
-            'symptoms', 'therapy', 'medicine', 'clinical', 'patient',
-            'disease', 'condition', 'healthcare', 'physician'
+        cooking_keywords = [
+            'recipe', 'cooking', 'baking', 'food', 'ingredient', 'kitchen', 'chef', 'meal', 'dish', 'cuisine', 'cook', 'bake', 'roast', 'grill', 'fry', 'boil', 'steam', 'season', 'spice', 'herb', 'sauce', 'marinade', 'dressing', 'appetizer', 'main course', 'dessert', 'breakfast', 'lunch', 'dinner'
         ]
         
-        # Must contain medical keywords or query terms
-        has_medical = any(keyword in title_lower for keyword in medical_keywords)
+        # Must contain cooking keywords or query terms
+        has_cooking = any(keyword in title_lower for keyword in cooking_keywords)
         has_query = any(word in title_lower for word in query_lower.split() if len(word) > 3)
         
-        return has_medical or has_query
+        return has_cooking or has_query
 
     def _search_platform_with_retry(self, query: str, platform: Dict, num_results: int, max_retries: int = 2) -> List[Dict]:
         """Search platform with retry logic and better error handling"""
@@ -130,9 +121,9 @@ class VideoSearchEngine:
         return []
 
     def search(self, query: str, num_results: int = 3, language: str = 'en') -> List[Dict]:
-        """Search for medical videos across platforms with deduplication and medical filtering"""
+        """Search for cooking videos across platforms with deduplication and cooking filtering"""
         query = self._normalize_query(query)
-        logger.info(f"Searching for medical videos: {query} (language: {language})")
+        logger.info(f"Searching for cooking videos: {query} (language: {language})")
         
         results = []
         seen_urls = set()  # Track URLs to avoid duplicates
@@ -152,7 +143,7 @@ class VideoSearchEngine:
                     logger.warning(f"No results from {platform['name']}")
                     continue
                 
-                # Filter out duplicates and non-medical content
+                # Filter out duplicates and non-cooking content
                 for result in platform_results:
                     url = result.get('url', '')
                     video_id = self._extract_video_id(url)
@@ -161,8 +152,8 @@ class VideoSearchEngine:
                     if url in seen_urls or (video_id and video_id in seen_video_ids):
                         continue
                     
-                    # Check if it's a valid medical video (less strict for more results)
-                    if self._is_valid_medical_video(result, query):
+                    # Check if it's a valid cooking video (less strict for more results)
+                    if self._is_valid_cooking_video(result, query):
                         seen_urls.add(url)
                         if video_id:
                             seen_video_ids.add(video_id)
@@ -192,7 +183,7 @@ class VideoSearchEngine:
                     
                     if (url not in seen_urls and 
                         video_id not in seen_video_ids and 
-                        self._is_valid_medical_video(result, query)):
+                        self._is_valid_cooking_video(result, query)):
                         seen_urls.add(url)
                         if video_id:
                             seen_video_ids.add(video_id)
@@ -373,8 +364,8 @@ class VideoSearchEngine:
         fallback_videos = {
             'en': [
                 {
-                    'url': 'https://www.youtube.com/results?search_query=medical+' + quote(query),
-                    'title': f'Medical Videos: {query}',
+                    'url': 'https://www.youtube.com/results?search_query=cooking+' + quote(query),
+                    'title': f'Cooking Videos: {query}',
                     'platform': 'youtube_fallback',
                     'type': 'video',
                     'source': 'youtube'

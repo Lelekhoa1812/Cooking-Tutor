@@ -13,9 +13,9 @@ class SourceAggregator:
         # (Removed credibility scoring; keep placeholder map for future use)
         self.source_credibility = {
             # English sources
-            'mayoclinic.org': 0.95,
-            'webmd.com': 0.90,
-            'healthline.com': 0.88,
+            'allrecipes.com': 0.95,
+            'foodnetwork.com': 0.90,
+            'epicurious.com': 0.88,
             'medlineplus.gov': 0.95,
             'nih.gov': 0.98,
             'cdc.gov': 0.98,
@@ -29,7 +29,7 @@ class SourceAggregator:
             'hellobacsi.com': 0.85,
             'alobacsi.com': 0.82,
             'vinmec.com': 0.88,
-            'tamanhhospital.vn': 0.85,
+            'monngonviet.com': 0.85,
             'medlatec.vn': 0.83,
             'suckhoedoisong.vn': 0.90,
             'viendinhduong.vn': 0.87,
@@ -40,7 +40,7 @@ class SourceAggregator:
             'chunyuyisheng.com': 0.84,
             'xywy.com': 0.82,
             'jiankang.com': 0.80,
-            'familydoctor.com.cn': 0.85,
+            'xiachufang.com': 0.85,
             
             # Video platforms
             'youtube.com': 0.70,
@@ -50,8 +50,8 @@ class SourceAggregator:
         # Source type classification
         self.source_types = {
             'academic': ['nih.gov', 'pubmed.ncbi.nlm.nih.gov', 'who.int', 'cdc.gov'],
-            'hospital': ['mayoclinic.org', 'vinmec.com', 'tamanhhospital.vn'],
-            'commercial': ['webmd.com', 'healthline.com', 'hellobacsi.com'],
+            'cooking_sites': ['allrecipes.com', 'foodnetwork.com', 'epicurious.com'],
+            'commercial': ['seriouseats.com', 'bonappetit.com', 'tasteofhome.com'],
             'government': ['medlineplus.gov', 'suckhoedoisong.vn', 'viendinhduong.vn'],
             'professional': ['dxy.cn', 'medscape.com', 'uptodate.com'],
             'video': ['youtube.com', 'medscape.com']
@@ -325,7 +325,7 @@ class SourceAggregator:
             # Create type indicator
             type_icons = {
                 'academic': '🎓',
-                'hospital': '🏥',
+                'cooking_sites': '🍳',
                 'government': '🏛️',
                 'commercial': '💼',
                 'professional': '👨‍⚕️',

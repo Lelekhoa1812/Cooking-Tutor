@@ -7,7 +7,6 @@ from .config import gemini_flash_api_key
 from memory import MemoryManager
 from utils import translate_query
 from search import search_comprehensive
-# Safety guard removed - cooking tutor doesn't need medical safety checks
 
 logger = logging.getLogger("cooking-tutor")
 
@@ -66,9 +65,8 @@ class CookingTutorChatbot:
         cuisine: str = None,
         structured: bool = False,
     ) -> str:
-        # Translate to English-centric search if needed
-        if lang.upper() in {"VI", "ZH"}:
-            user_query = translate_query(user_query, lang.lower())
+        # Keep original language for native search - no translation needed
+        # The search engines now support native language sources
 
         # Basic cooking relevance check
         cooking_keywords = ['recipe', 'cooking', 'baking', 'food', 'ingredient', 'kitchen', 'chef', 'meal', 'dish', 'cuisine', 'cook', 'bake', 'roast', 'grill', 'fry', 'boil', 'steam', 'season', 'spice', 'herb', 'sauce', 'marinade', 'dressing', 'appetizer', 'main course', 'dessert', 'breakfast', 'lunch', 'dinner']
@@ -88,11 +86,13 @@ class CookingTutorChatbot:
 
         if search_mode:
             try:
+                # Use native language search for better results
                 search_context, url_mapping, source_aggregation = search_comprehensive(
-                    f"cooking technique tutorial: {user_query}",
+                    user_query,  # Use original query without English prefix
                     num_results=12,
                     target_language=lang,
-                    include_videos=bool(video_mode)
+                    include_videos=bool(video_mode),
+                    include_images=True  # Always include images for visual appeal
                 )
                 if video_mode and source_aggregation:
                     video_results = source_aggregation.get('sources', []) or []
@@ -170,11 +170,24 @@ class CookingTutorChatbot:
         if user_id:
             self.memory.add_exchange(user_id, user_query, response, lang=lang)
 
+        # Prepare response with media
+        response_data = {
+            'text': response.strip()
+        }
+        
+        # Add videos if available
         if video_mode and video_results:
-            return {
-                'text': response.strip(),
-                'videos': video_results
-            }
+            response_data['videos'] = video_results
+        
+        # Add images if available
+        if source_aggregation and 'images' in source_aggregation:
+            images = source_aggregation['images']
+            if images:
+                response_data['images'] = images[:3]  # Limit to 3 images
+        
+        # Return structured response if we have media, otherwise just text
+        if len(response_data) > 1:
+            return response_data
         return response.strip()
     
     def _process_citations(self, response: str, url_mapping: Dict[int, str]) -> str:

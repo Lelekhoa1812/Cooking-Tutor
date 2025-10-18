@@ -30,7 +30,7 @@ class CookingSearchProcessor:
             ],
             'dietary': [
                 'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'paleo', 'diet',
-                'healthy', 'low-carb', 'low-fat', 'protein', 'fiber'
+                'healthy', 'low-carb', 'low-fat', 'protein', 'fiber', 'nutritious', 'balanced'
             ],
             'meal_types': [
                 'appetizer', 'main course', 'dessert', 'breakfast', 'lunch', 'dinner',
@@ -272,12 +272,12 @@ class CookingSearchProcessor:
         
         # Add topic header
         topic_headers = {
-            'recipes': "**🍳 Recipes and Instructions:**",
-            'techniques': "**👨‍🍳 Cooking Techniques:**",
-            'ingredients': "**🥘 Ingredients and Substitutions:**",
-            'equipment': "**🔪 Equipment and Tools:**",
-            'tips_tricks': "**💡 Tips and Tricks:**",
-            'general': "**📚 General Information:**"
+            'recipes': "**Recipes and Instructions:**",
+            'techniques': "**Cooking Techniques:**",
+            'ingredients': "**Ingredients and Substitutions:**",
+            'equipment': "**Equipment and Tools:**",
+            'tips_tricks': "**Tips and Tricks:**",
+            'general': "**General Information:**"
         }
         
         header = topic_headers.get(topic, "**Information:**")
