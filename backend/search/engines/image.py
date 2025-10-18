@@ -73,8 +73,17 @@ class ImageSearchEngine:
         # Extract key cooking terms from the original query
         query_lower = original_query.lower()
         
-        # 1. Final dish query (original focus)
-        final_dish_query = f"{original_query} final dish completed recipe"
+        # Clean the original query for better search results
+        clean_query = original_query.strip()
+        
+        # 1. Final dish query - more specific and relevant
+        if any(keyword in query_lower for keyword in ['pad thai', 'noodles', 'pasta']):
+            final_dish_query = f"pad thai dish completed finished"
+        elif any(keyword in query_lower for keyword in ['fusion', 'western']):
+            final_dish_query = f"fusion cooking dish completed"
+        else:
+            final_dish_query = f"{clean_query} dish completed"
+        
         queries.append({
             'query': final_dish_query,
             'context': 'final_dish',
@@ -82,8 +91,14 @@ class ImageSearchEngine:
             'max_results': max(1, num_results // 3)
         })
         
-        # 2. Ingredients query
-        ingredients_query = f"{original_query} ingredients fresh raw materials"
+        # 2. Ingredients query - more specific
+        if any(keyword in query_lower for keyword in ['pad thai', 'noodles', 'pasta']):
+            ingredients_query = f"pad thai ingredients rice noodles shrimp"
+        elif any(keyword in query_lower for keyword in ['fusion', 'western']):
+            ingredients_query = f"fusion cooking ingredients fresh"
+        else:
+            ingredients_query = f"{clean_query} ingredients fresh"
+        
         queries.append({
             'query': ingredients_query,
             'context': 'ingredients',
@@ -91,31 +106,20 @@ class ImageSearchEngine:
             'max_results': max(1, num_results // 3)
         })
         
-        # 3. Cooking technique/process query
-        technique_query = f"{original_query} cooking technique process step by step"
+        # 3. Cooking technique/process query - more specific
+        if any(keyword in query_lower for keyword in ['pad thai', 'noodles', 'pasta']):
+            technique_query = f"pad thai cooking technique wok stir fry"
+        elif any(keyword in query_lower for keyword in ['fusion', 'western']):
+            technique_query = f"fusion cooking technique western"
+        else:
+            technique_query = f"{clean_query} cooking technique"
+        
         queries.append({
             'query': technique_query,
             'context': 'technique',
             'type': 'technique',
             'max_results': max(1, num_results // 3)
         })
-        
-        # Add more specific queries based on the original query content
-        if any(keyword in query_lower for keyword in ['pad thai', 'noodles', 'pasta']):
-            queries.append({
-                'query': f"{original_query} noodle preparation cooking technique",
-                'context': 'noodle_technique',
-                'type': 'technique',
-                'max_results': 1
-            })
-        
-        if any(keyword in query_lower for keyword in ['fusion', 'western', 'technique']):
-            queries.append({
-                'query': f"{original_query} fusion cooking western technique",
-                'context': 'fusion_technique',
-                'type': 'technique',
-                'max_results': 1
-            })
         
         return queries
     
@@ -198,12 +202,12 @@ class ImageSearchEngine:
     def _search_google_images(self, query: str, num_results: int, language: str) -> List[Dict]:
         """Search Google Images for cooking content"""
         try:
-            # Add cooking context to improve relevance
-            cooking_query = f"{query} recipe cooking food dish"
+            # Use the query as-is for better relevance, don't add generic terms
+            search_query = query.strip()
             
             url = "https://www.google.com/search"
             params = {
-                'q': cooking_query,
+                'q': search_query,
                 'tbm': 'isch',  # Image search
                 'hl': language,
                 'safe': 'active',
@@ -261,11 +265,12 @@ class ImageSearchEngine:
     def _search_bing_images(self, query: str, num_results: int, language: str) -> List[Dict]:
         """Search Bing Images for cooking content"""
         try:
-            cooking_query = f"{query} recipe cooking food"
+            # Use the query as-is for better relevance
+            search_query = query.strip()
             
             url = "https://www.bing.com/images/search"
             params = {
-                'q': cooking_query,
+                'q': search_query,
                 'qft': '+filterui:imagesize-large',  # Large images
                 'form': 'HDRSC2',
                 'first': '1',
@@ -321,9 +326,10 @@ class ImageSearchEngine:
     def _search_unsplash(self, query: str, num_results: int, language: str) -> List[Dict]:
         """Search Unsplash for high-quality cooking images"""
         try:
-            cooking_query = f"{query} food cooking recipe"
+            # Use the query as-is for better relevance
+            search_query = query.strip()
             
-            url = "https://unsplash.com/s/photos/" + cooking_query.replace(' ', '-')
+            url = "https://unsplash.com/s/photos/" + search_query.replace(' ', '-')
             
             response = self.session.get(url, timeout=self.timeout)
             response.raise_for_status()
