@@ -1274,6 +1274,11 @@ function renderStructuredContent(structuredContent) {
             const imageBlock = document.createElement('div');
             imageBlock.classList.add('cooking-image-block');
             
+            // Add image type data attribute for enhanced styling
+            if (block.image_data.image_type) {
+                imageBlock.setAttribute('data-image-type', block.image_data.image_type);
+            }
+            
             const img = document.createElement('img');
             img.src = block.image_data.url;
             img.alt = block.image_data.alt_text;
@@ -1297,7 +1302,20 @@ function renderStructuredContent(structuredContent) {
             if (block.image_data.caption) {
                 const caption = document.createElement('p');
                 caption.className = 'image-caption';
-                caption.textContent = block.image_data.caption;
+                
+                // Add image type indicator to caption
+                let captionText = block.image_data.caption;
+                if (block.image_data.image_type) {
+                    const typeEmoji = {
+                        'ingredients': '🥬',
+                        'technique': '👨‍🍳',
+                        'final_dish': '🍽️'
+                    };
+                    const emoji = typeEmoji[block.image_data.image_type] || '📸';
+                    captionText = `${emoji} ${captionText}`;
+                }
+                
+                caption.textContent = captionText;
                 imageBlock.appendChild(caption);
             }
             

@@ -1496,6 +1496,48 @@ body {
     border-left: 3px solid var(--text-accent);
   }
 
+  /* Enhanced styling for different image types */
+  .cooking-image-block[data-image-type="ingredients"] {
+    border-left: 4px solid #84cc16; /* Green for ingredients */
+  }
+
+  .cooking-image-block[data-image-type="ingredients"]::before {
+    background: linear-gradient(90deg, #84cc16, #22c55e);
+  }
+
+  .cooking-image-block[data-image-type="technique"] {
+    border-left: 4px solid #f59e0b; /* Orange for techniques */
+  }
+
+  .cooking-image-block[data-image-type="technique"]::before {
+    background: linear-gradient(90deg, #f59e0b, #f97316);
+  }
+
+  .cooking-image-block[data-image-type="final_dish"] {
+    border-left: 4px solid #ef4444; /* Red for final dishes */
+  }
+
+  .cooking-image-block[data-image-type="final_dish"]::before {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+  }
+
+  /* Responsive image sizing for inline display */
+  .cooking-image-block {
+    max-width: 100%;
+    margin: 16px auto;
+  }
+
+  @media (max-width: 768px) {
+    .cooking-image-block {
+      margin: 12px 0;
+      padding: 16px;
+    }
+    
+    .cooking-image {
+      max-width: 100%;
+    }
+  }
+
   .cooking-images-gallery {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
