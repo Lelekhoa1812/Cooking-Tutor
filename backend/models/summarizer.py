@@ -39,21 +39,21 @@ class TextSummarizer:
         return text.strip()
     
     def extract_key_phrases(self, text: str) -> List[str]:
-        """Extract key medical phrases and terms"""
+        """Extract key cooking phrases and terms"""
         if not text:
             return []
         
-        # Medical term patterns
-        medical_patterns = [
-            r'\b(?:symptoms?|diagnosis|treatment|therapy|medication|drug|disease|condition|syndrome)\b',
-            r'\b(?:patient|doctor|physician|medical|clinical|healthcare)\b',
-            r'\b(?:blood pressure|heart rate|temperature|pulse|respiration)\b',
-            r'\b(?:acute|chronic|severe|mild|moderate|serious|critical)\b',
-            r'\b(?:pain|ache|discomfort|swelling|inflammation|infection)\b'
+        # Cooking term patterns
+        cooking_patterns = [
+            r'\b(?:recipe|ingredients?|cooking|baking|roasting|grilling|frying|boiling|steaming)\b',
+            r'\b(?:chef|cook|kitchen|cuisine|meal|dish|food|taste|flavor)\b',
+            r'\b(?:temperature|timing|preparation|technique|method|seasoning|spices?|herbs?)\b',
+            r'\b(?:oven|stovetop|grill|pan|pot|skillet|knife|cutting|chopping)\b',
+            r'\b(?:sauce|marinade|dressing|garnish|presentation|serving)\b'
         ]
         
         key_phrases = []
-        for pattern in medical_patterns:
+        for pattern in cooking_patterns:
             matches = re.findall(pattern, text, re.IGNORECASE)
             key_phrases.extend(matches)
         
@@ -70,10 +70,10 @@ class TextSummarizer:
             
             # Extract key phrases for context
             key_phrases = self.extract_key_phrases(cleaned_text)
-            key_phrases_str = ", ".join(key_phrases[:5]) if key_phrases else "medical information"
+            key_phrases_str = ", ".join(key_phrases[:5]) if key_phrases else "cooking information"
             
             # Create optimized prompt
-            prompt = f"""Summarize this medical text in {max_length} characters or less. Focus only on key medical facts, symptoms, treatments, and diagnoses. Do not include greetings, confirmations, or conversational elements.
+            prompt = f"""Summarize this cooking text in {max_length} characters or less. Focus only on key cooking facts, recipes, techniques, and ingredients. Do not include greetings, confirmations, or conversational elements.
 
 Key terms: {key_phrases_str}
 
@@ -110,7 +110,7 @@ Summary:"""
 
             # Short, strict prompt to avoid verbosity; instruct to output NOTHING if irrelevant
             prompt = (
-                f"You extract only medically relevant facts that help answer: '{query}'. "
+                f"You extract only cooking relevant facts that help answer: '{query}'. "
                 f"Respond with a concise bullet list (<= {max_length} chars total). "
                 "If the content is irrelevant, respond with EXACTLY: NONE.\n\n"
                 f"Content: {cleaned_text[:1600]}\n\nRelevant facts:"
@@ -138,12 +138,12 @@ Summary:"""
                 url_mapping[doc_id] = doc['url']
                 
                 # Create focused summary for each document
-                summary_prompt = f"""Summarize this medical document in 2-3 sentences, focusing on information relevant to: "{user_query}"
+                summary_prompt = f"""Summarize this cooking document in 2-3 sentences, focusing on information relevant to: "{user_query}"
 
 Document: {doc['title']}
 Content: {doc['content'][:800]}
 
-Key medical information:"""
+Key cooking information:"""
 
                 summary = self.llama_client._call_llama(summary_prompt)
                 summary = self.clean_text(summary)
@@ -165,11 +165,11 @@ Key medical information:"""
             
             cleaned_chunk = self.clean_text(chunk)
             
-            prompt = f"""Summarize this medical conversation in 1-2 sentences. Focus only on medical facts, symptoms, treatments, or diagnoses discussed. Remove greetings and conversational elements.
+            prompt = f"""Summarize this cooking conversation in 1-2 sentences. Focus only on cooking facts, recipes, techniques, or ingredients discussed. Remove greetings and conversational elements.
 
 Conversation: {cleaned_chunk[:1000]}
 
-Medical summary:"""
+Cooking summary:"""
 
             summary = self.llama_client._call_llama(prompt)
             return self.clean_text(summary)
