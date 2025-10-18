@@ -68,10 +68,23 @@ class CookingTutorChatbot:
         # Keep original language for native search - no translation needed
         # The search engines now support native language sources
 
-        # Basic cooking relevance check
-        cooking_keywords = ['recipe', 'cooking', 'baking', 'food', 'ingredient', 'kitchen', 'chef', 'meal', 'dish', 'cuisine', 'cook', 'bake', 'roast', 'grill', 'fry', 'boil', 'steam', 'season', 'spice', 'herb', 'sauce', 'marinade', 'dressing', 'appetizer', 'main course', 'dessert', 'breakfast', 'lunch', 'dinner']
+        # Multilingual cooking relevance check
+        cooking_keywords = {
+            'en': ['recipe', 'cooking', 'baking', 'food', 'ingredient', 'kitchen', 'chef', 'meal', 'dish', 'cuisine', 'cook', 'bake', 'roast', 'grill', 'fry', 'boil', 'steam', 'season', 'spice', 'herb', 'sauce', 'marinade', 'dressing', 'appetizer', 'main course', 'dessert', 'breakfast', 'lunch', 'dinner'],
+            'vi': ['công thức', 'nấu ăn', 'nướng', 'thức ăn', 'nguyên liệu', 'bếp', 'đầu bếp', 'bữa ăn', 'món ăn', 'ẩm thực', 'nấu', 'nướng', 'rang', 'nướng vỉ', 'chiên', 'luộc', 'hấp', 'gia vị', 'thảo mộc', 'nước sốt', 'tẩm ướp', 'khai vị', 'món chính', 'tráng miệng', 'sáng', 'trưa', 'tối', 'bún', 'phở', 'chả', 'nem', 'gỏi', 'canh', 'cháo', 'cơm', 'bánh', 'chè'],
+            'zh': ['食谱', '烹饪', '烘焙', '食物', '食材', '厨房', '厨师', '餐', '菜', '菜系', '煮', '烤', '炒', '炸', '蒸', '调料', '香料', '酱汁', '开胃菜', '主菜', '甜点', '早餐', '午餐', '晚餐', '面条', '米饭', '汤', '饺子', '包子']
+        }
+        
+        # Check cooking relevance in multiple languages
         query_lower = user_query.lower()
-        if not any(keyword in query_lower for keyword in cooking_keywords):
+        is_cooking_related = False
+        
+        for language, keywords in cooking_keywords.items():
+            if any(keyword in query_lower for keyword in keywords):
+                is_cooking_related = True
+                break
+        
+        if not is_cooking_related:
             logger.warning(f"[SAFETY] Non-cooking query detected: {user_query}")
             return "⚠️ I'm a cooking tutor! Please ask me about recipes, cooking techniques, ingredients, or anything food-related."
 
@@ -163,7 +176,15 @@ class CookingTutorChatbot:
         # Basic cooking relevance check for response
         if response and len(response) > 50:
             response_lower = response.lower()
-            if not any(keyword in response_lower for keyword in cooking_keywords):
+            is_cooking_response = False
+            
+            # Check if response contains cooking keywords in any language
+            for language, keywords in cooking_keywords.items():
+                if any(keyword in response_lower for keyword in keywords):
+                    is_cooking_response = True
+                    break
+            
+            if not is_cooking_response:
                 logger.warning(f"[SAFETY] Non-cooking response detected, redirecting to cooking topic")
                 response = "⚠️ Let's stick to cooking-related topics. Try asking about recipes, techniques, or ingredients!"
 
