@@ -18,7 +18,11 @@ class ImageSearchEngine:
         self.timeout = timeout
     
     def search_cooking_images(self, query: str, num_results: int = 3, language: str = "en") -> List[Dict]:
-        """Search for cooking-related images"""
+        """Search for cooking-related images with robust error handling"""
+        if not query or not query.strip():
+            logger.warning("Empty query provided for image search")
+            return []
+        
         results = []
         
         # Try multiple image search strategies
@@ -32,15 +36,62 @@ class ImageSearchEngine:
             try:
                 strategy_results = strategy(query, num_results, language)
                 if strategy_results:
-                    results.extend(strategy_results)
-                    logger.info(f"Image search found {len(strategy_results)} results")
-                    if len(results) >= num_results:
-                        break
+                    # Filter and validate results
+                    valid_results = self._validate_image_results(strategy_results)
+                    if valid_results:
+                        results.extend(valid_results)
+                        logger.info(f"Image search strategy found {len(valid_results)} valid results")
+                        if len(results) >= num_results:
+                            break
             except Exception as e:
                 logger.warning(f"Image search strategy failed: {e}")
                 continue
         
-        return results[:num_results]
+        # Remove duplicates and return
+        unique_results = self._remove_duplicate_images(results)
+        final_results = unique_results[:num_results]
+        
+        logger.info(f"Image search completed: {len(final_results)} unique results from {len(results)} total")
+        return final_results
+    
+    def _validate_image_results(self, results: List[Dict]) -> List[Dict]:
+        """Validate and clean image results"""
+        valid_results = []
+        
+        for result in results:
+            try:
+                # Check required fields
+                if not result.get('url') or not result.get('url').startswith('http'):
+                    continue
+                
+                # Ensure we have at least a basic title
+                if not result.get('title'):
+                    result['title'] = 'Cooking image'
+                
+                # Ensure we have alt text
+                if not result.get('alt_text'):
+                    result['alt_text'] = result.get('title', 'Cooking image')
+                
+                valid_results.append(result)
+                
+            except Exception as e:
+                logger.debug(f"Invalid image result skipped: {e}")
+                continue
+        
+        return valid_results
+    
+    def _remove_duplicate_images(self, results: List[Dict]) -> List[Dict]:
+        """Remove duplicate images based on URL"""
+        seen_urls = set()
+        unique_results = []
+        
+        for result in results:
+            url = result.get('url', '')
+            if url and url not in seen_urls:
+                seen_urls.add(url)
+                unique_results.append(result)
+        
+        return unique_results
     
     def _search_google_images(self, query: str, num_results: int, language: str) -> List[Dict]:
         """Search Google Images for cooking content"""
@@ -53,7 +104,8 @@ class ImageSearchEngine:
                 'q': cooking_query,
                 'tbm': 'isch',  # Image search
                 'hl': language,
-                'safe': 'active'
+                'safe': 'active',
+                'num': min(num_results, 20)  # Limit results
             }
             
             response = self.session.get(url, params=params, timeout=self.timeout)
@@ -62,8 +114,11 @@ class ImageSearchEngine:
             soup = BeautifulSoup(response.content, 'html.parser')
             results = []
             
-            # Find image containers
+            # Find image containers with multiple selectors
             image_containers = soup.find_all('div', class_='islrc')
+            if not image_containers:
+                # Try alternative selectors
+                image_containers = soup.find_all('div', {'data-ved': True})
             
             for container in image_containers[:num_results]:
                 try:
@@ -72,12 +127,12 @@ class ImageSearchEngine:
                     if not img_tag:
                         continue
                     
-                    img_url = img_tag.get('src') or img_tag.get('data-src')
+                    img_url = img_tag.get('src') or img_tag.get('data-src') or img_tag.get('data-original')
                     if not img_url or not img_url.startswith('http'):
                         continue
                     
                     # Extract title/alt text
-                    title = img_tag.get('alt', '') or img_tag.get('title', '')
+                    title = img_tag.get('alt', '') or img_tag.get('title', '') or 'Cooking image'
                     
                     # Extract source URL
                     link_tag = container.find('a')
@@ -112,7 +167,7 @@ class ImageSearchEngine:
                 'qft': '+filterui:imagesize-large',  # Large images
                 'form': 'HDRSC2',
                 'first': '1',
-                'count': num_results
+                'count': min(num_results, 20)
             }
             
             response = self.session.get(url, params=params, timeout=self.timeout)
@@ -121,8 +176,11 @@ class ImageSearchEngine:
             soup = BeautifulSoup(response.content, 'html.parser')
             results = []
             
-            # Find image containers
+            # Find image containers with multiple selectors
             image_containers = soup.find_all('div', class_='img_cont')
+            if not image_containers:
+                # Try alternative selectors
+                image_containers = soup.find_all('div', {'class': 'imgpt'})
             
             for container in image_containers[:num_results]:
                 try:
@@ -130,16 +188,20 @@ class ImageSearchEngine:
                     if not img_tag:
                         continue
                     
-                    img_url = img_tag.get('src') or img_tag.get('data-src')
+                    img_url = img_tag.get('src') or img_tag.get('data-src') or img_tag.get('data-original')
                     if not img_url or not img_url.startswith('http'):
                         continue
                     
-                    title = img_tag.get('alt', '') or img_tag.get('title', '')
+                    title = img_tag.get('alt', '') or img_tag.get('title', '') or 'Cooking image'
+                    
+                    # Try to get source URL
+                    link_tag = container.find('a')
+                    source_url = link_tag.get('href', '') if link_tag else ''
                     
                     results.append({
                         'url': img_url,
                         'title': title,
-                        'source_url': '',
+                        'source_url': source_url,
                         'source': 'bing_images',
                         'type': 'image'
                     })
@@ -167,8 +229,11 @@ class ImageSearchEngine:
             soup = BeautifulSoup(response.content, 'html.parser')
             results = []
             
-            # Find image containers
+            # Find image containers with multiple selectors
             image_containers = soup.find_all('figure')
+            if not image_containers:
+                # Try alternative selectors
+                image_containers = soup.find_all('div', {'class': 'MorZF'})
             
             for container in image_containers[:num_results]:
                 try:
@@ -176,11 +241,11 @@ class ImageSearchEngine:
                     if not img_tag:
                         continue
                     
-                    img_url = img_tag.get('src') or img_tag.get('data-src')
+                    img_url = img_tag.get('src') or img_tag.get('data-src') or img_tag.get('data-original')
                     if not img_url or not img_url.startswith('http'):
                         continue
                     
-                    title = img_tag.get('alt', '') or img_tag.get('title', '')
+                    title = img_tag.get('alt', '') or img_tag.get('title', '') or 'Cooking image'
                     
                     # Get source URL
                     link_tag = container.find('a')

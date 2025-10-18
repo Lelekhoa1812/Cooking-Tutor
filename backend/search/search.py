@@ -299,20 +299,21 @@ def search_comprehensive(query: str, num_results: int = 15, target_language: str
         except Exception as e:
             logger.warning(f"Simple fallback search failed: {e}")
     
+    # Map language codes for search engines
+    lang_mapping = {
+        'EN': 'en',
+        'VI': 'vi', 
+        'ZH': 'zh',
+        'en': 'en',
+        'vi': 'vi',
+        'zh': 'zh'
+    }
+    search_language = lang_mapping.get(target_language, 'en')
+    
     # Search for videos if requested (limit to avoid over-fetching)
     video_results = []
     if include_videos:
         try:
-            # Map language codes for video search
-            lang_mapping = {
-                'EN': 'en',
-                'VI': 'vi', 
-                'ZH': 'zh',
-                'en': 'en',
-                'vi': 'vi',
-                'zh': 'zh'
-            }
-            search_language = lang_mapping.get(target_language, 'en')
             # Limit video results to avoid over-fetching
             max_video_results = min(5, num_results // 3)  # Max 5 or 1/3 of total
             video_results = video_engine.search(boosted_query, num_results=max_video_results, language=search_language)
