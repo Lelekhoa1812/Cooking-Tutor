@@ -5,12 +5,12 @@ from typing import List, Dict
 import time
 import re
 from urllib.parse import urlparse, quote
-from models.reranker import MedicalReranker
+# Reranker removed - using simple relevance scoring for cooking content
 
 logger = logging.getLogger(__name__)
 
 class VideoSearchEngine:
-    """Search engine for medical videos across multiple platforms"""
+    """Search engine for cooking videos across multiple platforms"""
     
     def __init__(self, timeout: int = 15):
         self.session = requests.Session()
@@ -22,7 +22,7 @@ class VideoSearchEngine:
             'Connection': 'keep-alive',
         })
         self.timeout = timeout
-        self.reranker = MedicalReranker()
+        self.reranker = None  # No complex reranking needed for cooking content
         
         # Video platforms by language
         self.video_platforms = {
@@ -216,13 +216,21 @@ class VideoSearchEngine:
                 except Exception as e:
                     logger.warning(f"Fallback video search failed: {e}")
         
-        # Use reranker to improve quality and relevance
+        # Simple cooking relevance filtering
         if results:
-            reranked_results = self.reranker.filter_youtube_results(results, query)
-            logger.info(f"Reranked {len(results)} video results to {len(reranked_results)} high-quality results")
-            return reranked_results[:num_results]
+            # Filter for cooking relevance
+            cooking_keywords = ['recipe', 'cooking', 'baking', 'food', 'ingredient', 'kitchen', 'chef', 'meal', 'dish', 'cuisine', 'cook', 'bake', 'roast', 'grill', 'fry', 'boil', 'steam', 'season', 'spice', 'herb', 'sauce', 'marinade', 'dressing']
+            relevant_results = []
+            for result in results:
+                title = result.get('title', '').lower()
+                if any(keyword in title for keyword in cooking_keywords):
+                    relevant_results.append(result)
+            
+            if relevant_results:
+                results = relevant_results
+                logger.info(f"Filtered to {len(results)} cooking-relevant video results")
         
-        logger.info(f"Found {len(results)} medical video results")
+        logger.info(f"Found {len(results)} cooking video results")
         return results[:num_results]
     
     def _search_platform(self, query: str, platform: Dict, num_results: int) -> List[Dict]:

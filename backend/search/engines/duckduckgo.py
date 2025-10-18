@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import logging
 from typing import List, Dict
 import time
-from models.reranker import MedicalReranker
+# Reranker removed - using simple relevance scoring for cooking content
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class DuckDuckGoEngine:
             'Upgrade-Insecure-Requests': '1',
         })
         self.timeout = timeout
-        self.reranker = MedicalReranker()
+        self.reranker = None  # No complex reranking needed for cooking content
     
     def search(self, query: str, num_results: int = 10) -> List[Dict]:
         """Search with multiple DuckDuckGo strategies and medical focus"""
@@ -74,29 +74,12 @@ class DuckDuckGoEngine:
         filtered_results = self._filter_irrelevant_sources(results)
         logger.info(f"Filtered {len(results)} results to {len(filtered_results)} relevant results")
         
-        # If we have results, use reranker; otherwise return what we have
+        # Simple cooking relevance scoring
         if filtered_results:
-            try:
-                reranked_results = self.reranker.rerank_results(clean_query, filtered_results, min_score)
-                logger.info(f"Reranked {len(filtered_results)} results to {len(reranked_results)} high-quality results")
-                
-                # If reranking filtered out too many results, be more lenient
-                if len(reranked_results) < min(3, num_results) and len(filtered_results) > 0:
-                    logger.warning(f"Reranking too strict ({len(reranked_results)} results), using fallback with lower threshold")
-                    # Try with even lower threshold
-                    fallback_results = self.reranker.rerank_results(clean_query, filtered_results, 0.05)
-                    if len(fallback_results) > len(reranked_results):
-                        return fallback_results[:num_results]
-                    else:
-                        # Last resort: return original filtered results with basic scoring
-                        for i, result in enumerate(filtered_results[:num_results]):
-                            result['composite_score'] = 0.5 - (i * 0.05)  # Decreasing score
-                        return filtered_results[:num_results]
-                
-                return reranked_results[:num_results]
-            except Exception as e:
-                logger.warning(f"Reranking failed: {e}, returning filtered results")
-                return filtered_results[:num_results]
+            # Add basic scoring based on cooking relevance
+            for i, result in enumerate(filtered_results[:num_results]):
+                result['composite_score'] = 0.8 - (i * 0.05)  # Decreasing score
+            return filtered_results[:num_results]
         
         return filtered_results[:num_results]
     
