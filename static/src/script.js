@@ -1134,21 +1134,33 @@ async function sendMessage(customQuery = null, imageBase64 = null) {
         console.log('🔍 Parsed HTML:', htmlResponse);
         console.log('🔍 Original response:', data.response);
         
-        appendMessage('bot', htmlResponse, true);
+        // Handle structured content with images if present
+        if (data.structured_content && data.structured_content.length > 0) {
+            // Use structured content for optimal layout with images
+            renderStructuredContent(data.structured_content);
+        } else {
+            // Fallback to simple text rendering
+            appendMessage('bot', htmlResponse, true);
+        }
         
         // Add event listeners for citation links
         addCitationListeners();
         
         // Handle video data if present
-    if (data.videos && data.videos.length > 0) {
-        displayVideos(data.videos);
-    } else {
-        // If backend didn't return videos, try to render any that were previously stored
-        const stored = getStoredVideos();
-        if (stored.length > 0) {
-            displayVideos(stored);
+        if (data.videos && data.videos.length > 0) {
+            displayVideos(data.videos);
+        } else {
+            // If backend didn't return videos, try to render any that were previously stored
+            const stored = getStoredVideos();
+            if (stored.length > 0) {
+                displayVideos(stored);
+            }
         }
-    }
+        
+        // Handle standalone images if present (fallback)
+        if (data.images && data.images.length > 0 && !data.structured_content) {
+            displayCookingImages(data.images);
+        }
         
         // Remove from pending requests since we got the response
         if (data.request_id) {
@@ -1221,6 +1233,201 @@ function clearStoredVideos() {
     } catch (e) {
         console.warn('Failed to clear stored videos', e);
     }
+}
+
+// --- Image rendering functions ---
+function renderStructuredContent(structuredContent) {
+    if (!structuredContent || structuredContent.length === 0) return;
+    
+    const messagesDiv = document.getElementById('chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message');
+    
+    // Create message container
+    const messageContainer = document.createElement('div');
+    messageContainer.classList.add('bot');
+    
+    // Create label
+    const label = document.createElement('strong');
+    label.textContent = translations[currentLang].bot;
+    messageContainer.appendChild(label);
+    
+    // Create message bubble
+    const messageBubble = document.createElement('div');
+    messageBubble.classList.add('message-bubble');
+    
+    // Render each content block
+    structuredContent.forEach((block, index) => {
+        if (block.type === 'text') {
+            const textBlock = document.createElement('div');
+            textBlock.classList.add('text-block', block.section_type || 'content');
+            
+            // Process and render text content
+            const processedText = preProcessSourceObjects(block.content || "");
+            const htmlText = marked.parse(processedText);
+            const processedHtml = processCitations(htmlText);
+            
+            textBlock.innerHTML = processedHtml;
+            messageBubble.appendChild(textBlock);
+            
+        } else if (block.type === 'image') {
+            const imageBlock = document.createElement('div');
+            imageBlock.classList.add('cooking-image-block');
+            
+            const img = document.createElement('img');
+            img.src = block.image_data.url;
+            img.alt = block.image_data.alt_text;
+            img.loading = block.image_data.loading || 'lazy';
+            img.className = 'cooking-image';
+            
+            // Add error handling
+            img.onerror = function() {
+                console.warn('Failed to load cooking image:', this.src);
+                this.style.display = 'none';
+            };
+            
+            // Add click to enlarge functionality
+            img.onclick = function() {
+                openImageModal(this.src, block.image_data.caption || block.image_data.alt_text);
+            };
+            
+            imageBlock.appendChild(img);
+            
+            // Add caption if available
+            if (block.image_data.caption) {
+                const caption = document.createElement('p');
+                caption.className = 'image-caption';
+                caption.textContent = block.image_data.caption;
+                imageBlock.appendChild(caption);
+            }
+            
+            messageBubble.appendChild(imageBlock);
+        }
+    });
+    
+    messageContainer.appendChild(messageBubble);
+    messageDiv.appendChild(messageContainer);
+    messagesDiv.appendChild(messageDiv);
+    
+    // Smooth scroll to bottom
+    messagesDiv.scrollTo({
+        top: messagesDiv.scrollHeight,
+        behavior: 'smooth'
+    });
+    
+    // Save chat history after adding message
+    saveChatHistory();
+}
+
+function displayCookingImages(images) {
+    if (!images || images.length === 0) return;
+    
+    const messagesDiv = document.getElementById('chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message');
+    
+    // Create message container
+    const messageContainer = document.createElement('div');
+    messageContainer.classList.add('bot');
+    
+    // Create label
+    const label = document.createElement('strong');
+    label.textContent = translations[currentLang].bot;
+    messageContainer.appendChild(label);
+    
+    // Create message bubble
+    const messageBubble = document.createElement('div');
+    messageBubble.classList.add('message-bubble');
+    
+    // Create images container
+    const imagesContainer = document.createElement('div');
+    imagesContainer.classList.add('cooking-images-gallery');
+    
+    images.forEach((image, index) => {
+        const imageCard = document.createElement('div');
+        imageCard.classList.add('cooking-image-card');
+        
+        const img = document.createElement('img');
+        img.src = image.url;
+        img.alt = image.alt_text;
+        img.loading = image.loading || 'lazy';
+        img.className = 'cooking-image';
+        
+        // Add error handling
+        img.onerror = function() {
+            console.warn('Failed to load cooking image:', this.src);
+            this.style.display = 'none';
+        };
+        
+        // Add click to enlarge functionality
+        img.onclick = function() {
+            openImageModal(this.src, image.caption || image.alt_text);
+        };
+        
+        imageCard.appendChild(img);
+        
+        // Add caption if available
+        if (image.caption) {
+            const caption = document.createElement('p');
+            caption.className = 'image-caption';
+            caption.textContent = image.caption;
+            imageCard.appendChild(caption);
+        }
+        
+        imagesContainer.appendChild(imageCard);
+    });
+    
+    messageBubble.appendChild(imagesContainer);
+    messageContainer.appendChild(messageBubble);
+    messageDiv.appendChild(messageContainer);
+    messagesDiv.appendChild(messageDiv);
+    
+    // Smooth scroll to bottom
+    messagesDiv.scrollTo({
+        top: messagesDiv.scrollHeight,
+        behavior: 'smooth'
+    });
+    
+    // Save chat history after adding message
+    saveChatHistory();
+}
+
+function openImageModal(imageSrc, caption) {
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.className = 'image-modal-overlay';
+    modal.onclick = function(e) {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    };
+    
+    // Create modal content
+    const modalContent = document.createElement('div');
+    modalContent.className = 'image-modal-content';
+    
+    const img = document.createElement('img');
+    img.src = imageSrc;
+    img.alt = caption;
+    img.className = 'image-modal-img';
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'image-modal-close';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.onclick = function() {
+        document.body.removeChild(modal);
+    };
+    
+    const captionEl = document.createElement('p');
+    captionEl.className = 'image-modal-caption';
+    captionEl.textContent = caption;
+    
+    modalContent.appendChild(closeBtn);
+    modalContent.appendChild(img);
+    modalContent.appendChild(captionEl);
+    modal.appendChild(modalContent);
+    
+    document.body.appendChild(modal);
 }
 
 // --- Render msg over ---

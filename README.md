@@ -6,6 +6,8 @@ Welcome to the AI-powered Cooking Tutor project! This platform leverages cutting
 - [Web App](https://cooking-tutor.vercel.app/)
 - [API Documentation](https://binkhoale1812-cooking-tutor.hf.space/docs)
 
+![Demo](imgsrc/demo.png)  
+
 ## 🍳 Frontend Capabilities
 - Multilingual UX (EN/VI/ZH) with responsive design
 - Interactive chat interface with cooking guidance
