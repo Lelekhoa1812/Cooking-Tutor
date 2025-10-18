@@ -59,15 +59,17 @@ async def chat_endpoint(req: Request):
         )
         elapsed = time.time() - start
         
-        # Handle response format (might be string or dict with videos/images)
+        # Handle response format (might be string or dict with videos/images/structured content)
         if isinstance(answer, dict):
             response_text = answer.get('text', '')
             video_data = answer.get('videos', [])
             image_data = answer.get('images', [])
+            structured_content = answer.get('structured_content', [])
         else:
             response_text = answer
             video_data = []
             image_data = []
+            structured_content = []
         
         # Final response
         response_data = {"response": f"{response_text}\n\n(Response time: {elapsed:.2f}s)"}
@@ -79,6 +81,10 @@ async def chat_endpoint(req: Request):
         # Include image data if available
         if image_data:
             response_data["images"] = image_data
+        
+        # Include structured content for optimal frontend rendering
+        if structured_content:
+            response_data["structured_content"] = structured_content
         
         return JSONResponse(response_data)
         

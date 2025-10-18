@@ -179,16 +179,233 @@ class CookingTutorChatbot:
         if video_mode and video_results:
             response_data['videos'] = video_results
         
-        # Add images if available
+        # Process and integrate images for optimal frontend display
         if source_aggregation and 'images' in source_aggregation:
             images = source_aggregation['images']
             if images:
-                response_data['images'] = images[:3]  # Limit to 3 images
+                # Create enhanced image data with better frontend integration
+                enhanced_images = self._enhance_images_for_frontend(images[:3], user_query)
+                response_data['images'] = enhanced_images
+                
+                # Create structured content with image placement suggestions
+                structured_content = self._create_structured_content(response.strip(), enhanced_images)
+                response_data['structured_content'] = structured_content
+                
+                # Keep original text for backward compatibility
+                response_data['text'] = response.strip()
         
         # Return structured response if we have media, otherwise just text
         if len(response_data) > 1:
             return response_data
         return response.strip()
+    
+    def _enhance_images_for_frontend(self, images: List[Dict], query: str) -> List[Dict]:
+        """Enhance image data for optimal frontend display"""
+        enhanced_images = []
+        
+        for i, image in enumerate(images):
+            # Extract key information
+            image_url = image.get('url', '')
+            title = image.get('title', '')
+            source_url = image.get('source_url', '')
+            source = image.get('source', 'unknown')
+            
+            # Generate contextual alt text and caption
+            alt_text = self._generate_image_alt_text(title, query, i)
+            caption = self._generate_image_caption(title, query, i)
+            
+            # Determine image placement context
+            placement_context = self._determine_image_placement(query, i)
+            
+            enhanced_image = {
+                'id': f"img_{i+1}",
+                'url': image_url,
+                'alt_text': alt_text,
+                'caption': caption,
+                'title': title,
+                'source_url': source_url,
+                'source': source,
+                'placement_context': placement_context,
+                'display_order': i + 1,
+                'aspect_ratio': '16:9',  # Default, can be detected later
+                'loading': 'lazy',  # For performance
+                'type': 'cooking_image'
+            }
+            
+            enhanced_images.append(enhanced_image)
+        
+        return enhanced_images
+    
+    def _generate_image_alt_text(self, title: str, query: str, index: int) -> str:
+        """Generate descriptive alt text for accessibility"""
+        if title and len(title) > 10:
+            return f"Cooking image: {title}"
+        
+        # Generate based on query context
+        query_lower = query.lower()
+        if 'recipe' in query_lower or 'cook' in query_lower:
+            return f"Recipe demonstration image {index + 1}"
+        elif 'ingredient' in query_lower:
+            return f"Ingredient showcase image {index + 1}"
+        elif 'technique' in query_lower or 'method' in query_lower:
+            return f"Cooking technique illustration {index + 1}"
+        else:
+            return f"Related cooking image {index + 1}"
+    
+    def _generate_image_caption(self, title: str, query: str, index: int) -> str:
+        """Generate contextual caption for the image"""
+        if title and len(title) > 5:
+            return title
+        
+        # Generate contextual captions
+        query_lower = query.lower()
+        if 'pad thai' in query_lower:
+            return f"Pad Thai cooking example {index + 1}"
+        elif 'fusion' in query_lower:
+            return f"Fusion cooking inspiration {index + 1}"
+        elif 'western' in query_lower:
+            return f"Western cooking technique {index + 1}"
+        else:
+            return f"Related cooking example {index + 1}"
+    
+    def _determine_image_placement(self, query: str, index: int) -> str:
+        """Determine where the image should be placed in the text"""
+        query_lower = query.lower()
+        
+        if index == 0:
+            if 'recipe' in query_lower or 'ingredient' in query_lower:
+                return 'after_ingredients'
+            elif 'technique' in query_lower or 'method' in query_lower:
+                return 'after_technique_intro'
+            else:
+                return 'after_intro'
+        elif index == 1:
+            return 'after_instructions'
+        else:
+            return 'after_tips'
+    
+    def _integrate_images_inline(self, text: str, images: List[Dict]) -> str:
+        """Integrate images inline with text using placeholders for frontend rendering"""
+        if not images:
+            return text
+        
+        # Split text into logical sections
+        sections = self._split_text_into_sections(text)
+        
+        # Insert image placeholders at appropriate positions
+        enhanced_text = self._insert_image_placeholders(sections, images)
+        
+        return enhanced_text
+    
+    def _split_text_into_sections(self, text: str) -> List[Dict]:
+        """Split text into logical sections for image placement"""
+        sections = []
+        lines = text.split('\n')
+        current_section = {'type': 'intro', 'content': '', 'images': []}
+        
+        for line in lines:
+            line_lower = line.lower().strip()
+            
+            # Detect section types
+            if any(keyword in line_lower for keyword in ['ingredients:', 'ingredient list:', 'what you need:']):
+                if current_section['content'].strip():
+                    sections.append(current_section)
+                current_section = {'type': 'ingredients', 'content': line + '\n', 'images': []}
+            elif any(keyword in line_lower for keyword in ['instructions:', 'directions:', 'how to cook:', 'steps:']):
+                if current_section['content'].strip():
+                    sections.append(current_section)
+                current_section = {'type': 'instructions', 'content': line + '\n', 'images': []}
+            elif any(keyword in line_lower for keyword in ['tips:', 'troubleshooting:', 'notes:', 'variations:']):
+                if current_section['content'].strip():
+                    sections.append(current_section)
+                current_section = {'type': 'tips', 'content': line + '\n', 'images': []}
+            else:
+                current_section['content'] += line + '\n'
+        
+        if current_section['content'].strip():
+            sections.append(current_section)
+        
+        return sections
+    
+    def _insert_image_placeholders(self, sections: List[Dict], images: List[Dict]) -> str:
+        """Insert image placeholders at appropriate positions in sections"""
+        enhanced_sections = []
+        image_index = 0
+        
+        for section in sections:
+            enhanced_sections.append(section['content'])
+            
+            # Determine if this section should have an image
+            should_place_image = False
+            if image_index < len(images):
+                placement_context = images[image_index]['placement_context']
+                
+                if (section['type'] == 'ingredients' and placement_context == 'after_ingredients') or \
+                   (section['type'] == 'instructions' and placement_context == 'after_instructions') or \
+                   (section['type'] == 'tips' and placement_context == 'after_tips') or \
+                   (section['type'] == 'intro' and placement_context == 'after_intro'):
+                    should_place_image = True
+            
+            if should_place_image and image_index < len(images):
+                image = images[image_index]
+                # Insert image placeholder that frontend can replace
+                image_placeholder = f"\n\n[IMAGE_PLACEHOLDER:{image['id']}]\n\n"
+                enhanced_sections.append(image_placeholder)
+                image_index += 1
+        
+        return ''.join(enhanced_sections)
+    
+    def _create_structured_content(self, text: str, images: List[Dict]) -> List[Dict]:
+        """Create structured content blocks for optimal frontend rendering"""
+        if not images:
+            return [{'type': 'text', 'content': text}]
+        
+        # Split text into logical sections
+        sections = self._split_text_into_sections(text)
+        structured_blocks = []
+        
+        image_index = 0
+        
+        for section in sections:
+            # Add text section
+            structured_blocks.append({
+                'type': 'text',
+                'content': section['content'].strip(),
+                'section_type': section['type']
+            })
+            
+            # Check if we should add an image after this section
+            if image_index < len(images):
+                image = images[image_index]
+                placement_context = image['placement_context']
+                
+                should_add_image = (
+                    (section['type'] == 'ingredients' and placement_context == 'after_ingredients') or
+                    (section['type'] == 'instructions' and placement_context == 'after_instructions') or
+                    (section['type'] == 'tips' and placement_context == 'after_tips') or
+                    (section['type'] == 'intro' and placement_context == 'after_intro')
+                )
+                
+                if should_add_image:
+                    structured_blocks.append({
+                        'type': 'image',
+                        'image_data': image,
+                        'placement': 'after_section',
+                        'section_type': section['type']
+                    })
+                    image_index += 1
+        
+        # Add any remaining images at the end
+        while image_index < len(images):
+            image = images[image_index]
+            structured_blocks.append({
+                'type': 'image',
+                'image_data': image,
+                'placement': 'end'
+            })
+            image_index += 1
+        
+        return structured_blocks
     
     def _process_citations(self, response: str, url_mapping: Dict[int, str]) -> str:
         """Replace citation tags with actual URLs, handling both single and multiple references"""
