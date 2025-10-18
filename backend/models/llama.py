@@ -11,7 +11,8 @@ class NVIDIALLamaClient:
     def __init__(self):
         self.api_key = os.getenv("NVIDIA_URI")
         if not self.api_key:
-            raise ValueError("NVIDIA_URI environment variable not set")
+            logger.warning("NVIDIA_URI not set - summarization will use fallback methods")
+            self.api_key = None
         
         # Correct NVIDIA Integrate API base
         self.base_url = "https://integrate.api.nvidia.com/v1"
@@ -19,11 +20,15 @@ class NVIDIALLamaClient:
         
     def generate_keywords(self, user_query: str) -> List[str]:
         """Use Llama to generate search keywords from user query"""
+        if not self.api_key:
+            # Fallback: extract keywords from query
+            return self._extract_keywords_fallback(user_query)
+        
         try:
-            prompt = f"""Given this medical question: "{user_query}"
+            prompt = f"""Given this cooking question: "{user_query}"
 
-Generate 3-5 specific search keywords that would help find relevant medical information online. 
-Focus on medical terms, symptoms, conditions, treatments, or procedures mentioned.
+Generate 3-5 specific search keywords that would help find relevant cooking information online. 
+Focus on cooking terms, ingredients, techniques, recipes, or culinary methods mentioned.
 Return only the keywords separated by commas, no explanations.
 
 Keywords:"""
@@ -37,7 +42,30 @@ Keywords:"""
             
         except Exception as e:
             logger.error(f"Failed to generate keywords: {e}")
-            return [user_query]  # Fallback to original query
+            return self._extract_keywords_fallback(user_query)
+    
+    def _extract_keywords_fallback(self, user_query: str) -> List[str]:
+        """Fallback keyword extraction when NVIDIA API is not available"""
+        # Simple keyword extraction from cooking terms
+        cooking_keywords = [
+            'recipe', 'cooking', 'baking', 'roasting', 'grilling', 'frying', 'boiling', 'steaming',
+            'ingredients', 'seasoning', 'spices', 'herbs', 'sauce', 'marinade', 'dressing',
+            'technique', 'method', 'temperature', 'timing', 'preparation', 'cooking time',
+            'oven', 'stovetop', 'grill', 'pan', 'pot', 'skillet', 'knife', 'cutting',
+            'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'paleo', 'diet',
+            'appetizer', 'main course', 'dessert', 'breakfast', 'lunch', 'dinner',
+            'cuisine', 'italian', 'chinese', 'mexican', 'french', 'indian', 'thai'
+        ]
+        
+        query_lower = user_query.lower()
+        found_keywords = [kw for kw in cooking_keywords if kw in query_lower]
+        
+        # If no cooking keywords found, use first few words
+        if not found_keywords:
+            words = user_query.split()[:5]
+            found_keywords = [w for w in words if len(w) > 2]
+        
+        return found_keywords[:5]  # Limit to 5 keywords
     
     def summarize_documents(self, documents: List[Dict], user_query: str) -> Tuple[str, Dict[int, str]]:
         """Use Llama to summarize documents and return summary with URL mapping"""

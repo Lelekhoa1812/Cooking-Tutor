@@ -10,8 +10,8 @@ import logging
 from models.summarizer import summarizer
 
 _LLM_SMALL = "gemini-2.5-flash-lite-preview-06-17"
-# Load embedding model
-EMBED = SentenceTransformer("/app/model_cache", device="cpu").half()
+# Load embedding model - use standard model that downloads automatically
+EMBED = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
 logger = logging.getLogger("rag-agent")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(name)s — %(levelname)s — %(message)s", force=True) # Change INFO to DEBUG for full-ctx JSON loader
 

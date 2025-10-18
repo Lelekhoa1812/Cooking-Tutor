@@ -7,7 +7,11 @@ logger = logging.getLogger(__name__)
 
 class TextSummarizer:
     def __init__(self):
-        self.llama_client = NVIDIALLamaClient()
+        try:
+            self.llama_client = NVIDIALLamaClient()
+        except Exception as e:
+            logger.warning(f"Failed to initialize NVIDIA Llama client: {e}")
+            self.llama_client = None
     
     def clean_text(self, text: str) -> str:
         """Clean and normalize text for summarization"""
@@ -61,6 +65,9 @@ class TextSummarizer:
     
     def summarize_text(self, text: str, max_length: int = 200) -> str:
         """Summarize text using NVIDIA Llama model"""
+        if not self.llama_client:
+            return self._summarize_fallback(text, max_length)
+        
         try:
             if not text or len(text.strip()) < 50:
                 return text
@@ -94,13 +101,34 @@ Summary:"""
             
         except Exception as e:
             logger.error(f"Summarization failed: {e}")
-            # Fallback to simple truncation
-            return self.clean_text(text)[:max_length]
+            return self._summarize_fallback(text, max_length)
+    
+    def _summarize_fallback(self, text: str, max_length: int = 200) -> str:
+        """Fallback summarization when NVIDIA API is not available"""
+        if not text:
+            return ""
+        
+        cleaned_text = self.clean_text(text)
+        if len(cleaned_text) <= max_length:
+            return cleaned_text
+        
+        # Simple truncation with sentence boundary detection
+        sentences = cleaned_text.split('. ')
+        result = ""
+        for sentence in sentences:
+            if len(result + sentence) > max_length:
+                break
+            result += sentence + ". "
+        
+        return result.strip() or cleaned_text[:max_length] + "..."
 
     def summarize_for_query(self, text: str, query: str, max_length: int = 220) -> str:
         """Summarize text focusing strictly on information relevant to the query.
         Returns an empty string if nothing relevant is found.
         """
+        if not self.llama_client:
+            return self._summarize_for_query_fallback(text, query, max_length)
+        
         try:
             if not text:
                 return ""
@@ -125,7 +153,41 @@ Summary:"""
             return summary
         except Exception as e:
             logger.warning(f"Query-focused summarization failed: {e}")
+            return self._summarize_for_query_fallback(text, query, max_length)
+    
+    def _summarize_for_query_fallback(self, text: str, query: str, max_length: int = 220) -> str:
+        """Fallback query-focused summarization when NVIDIA API is not available"""
+        if not text:
             return ""
+        
+        cleaned_text = self.clean_text(text)
+        if not cleaned_text:
+            return ""
+        
+        # Simple keyword matching for relevance
+        query_words = set(query.lower().split())
+        text_words = set(cleaned_text.lower().split())
+        
+        # Check if there's any overlap
+        overlap = query_words.intersection(text_words)
+        if not overlap:
+            return ""
+        
+        # Return first few sentences that contain query words
+        sentences = cleaned_text.split('. ')
+        relevant_sentences = []
+        for sentence in sentences:
+            sentence_words = set(sentence.lower().split())
+            if query_words.intersection(sentence_words):
+                relevant_sentences.append(sentence)
+                if len('. '.join(relevant_sentences)) > max_length:
+                    break
+        
+        result = '. '.join(relevant_sentences)
+        if len(result) > max_length:
+            result = result[:max_length-3] + "..."
+        
+        return result
     
     def summarize_documents(self, documents: List[Dict], user_query: str) -> Tuple[str, Dict[int, str]]:
         """Summarize multiple documents with URL mapping"""
