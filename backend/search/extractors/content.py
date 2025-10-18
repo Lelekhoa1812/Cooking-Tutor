@@ -22,15 +22,19 @@ class ContentExtractor:
         })
         self.timeout = timeout
         
-        # Medical content indicators
-        self.medical_indicators = [
-            'symptom', 'treatment', 'diagnosis', 'medicine', 'medication',
-            'therapy', 'condition', 'disease', 'health', 'medical',
-            'doctor', 'physician', 'patient', 'clinical', 'study'
+        # Cooking content indicators
+        self.cooking_indicators = [
+            'recipe', 'ingredients', 'instructions', 'cooking', 'baking', 'roasting',
+            'grilling', 'frying', 'boiling', 'steaming', 'sautéing', 'braising',
+            'seasoning', 'spices', 'herbs', 'sauce', 'marinade', 'dressing',
+            'temperature', 'timing', 'preparation', 'technique', 'method',
+            'oven', 'stovetop', 'grill', 'pan', 'pot', 'skillet', 'knife',
+            'cutting', 'chopping', 'dicing', 'slicing', 'mixing', 'stirring',
+            'servings', 'cook time', 'prep time', 'total time', 'difficulty'
         ]
     
     def extract(self, url: str, max_length: int = 2000) -> Optional[str]:
-        """Extract content from a URL with medical focus"""
+        """Extract content from a URL with cooking focus"""
         try:
             response = self.session.get(url, timeout=self.timeout)
             response.raise_for_status()
@@ -49,11 +53,11 @@ class ContentExtractor:
             # Clean and process content
             cleaned_content = self._clean_content(content)
             
-            # Focus on medical content if possible
-            medical_content = self._extract_medical_content(cleaned_content)
+            # Focus on cooking content if possible
+            cooking_content = self._extract_cooking_content(cleaned_content)
             
             # Truncate to max length
-            final_content = self._truncate_content(medical_content or cleaned_content, max_length)
+            final_content = self._truncate_content(cooking_content or cleaned_content, max_length)
             
             return final_content if final_content else None
             
@@ -145,29 +149,29 @@ class ContentExtractor:
         
         return content.strip()
     
-    def _extract_medical_content(self, content: str) -> Optional[str]:
-        """Extract medical-focused content from the text"""
+    def _extract_cooking_content(self, content: str) -> Optional[str]:
+        """Extract cooking-focused content from the text"""
         if not content:
             return None
         
         # Split content into sentences
         sentences = re.split(r'[.!?]+', content)
-        medical_sentences = []
+        cooking_sentences = []
         
         for sentence in sentences:
             sentence = sentence.strip()
             if len(sentence) < 20:  # Skip very short sentences
                 continue
             
-            # Check if sentence contains medical indicators
+            # Check if sentence contains cooking indicators
             sentence_lower = sentence.lower()
-            if any(indicator in sentence_lower for indicator in self.medical_indicators):
-                medical_sentences.append(sentence)
+            if any(indicator in sentence_lower for indicator in self.cooking_indicators):
+                cooking_sentences.append(sentence)
         
-        if medical_sentences:
-            # Return medical sentences, prioritizing longer ones
-            medical_sentences.sort(key=len, reverse=True)
-            return '. '.join(medical_sentences[:10]) + '.'
+        if cooking_sentences:
+            # Return cooking sentences, prioritizing longer ones
+            cooking_sentences.sort(key=len, reverse=True)
+            return '. '.join(cooking_sentences[:15]) + '.'  # More sentences for cooking content
         
         return None
     

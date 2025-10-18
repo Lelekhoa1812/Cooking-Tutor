@@ -9,17 +9,47 @@ class CookingSearchProcessor:
     """Process and enhance cooking search results"""
     
     def __init__(self):
-        self.cooking_keywords = [
-            'recipe', 'cooking', 'baking', 'roasting', 'grilling', 'frying', 'boiling', 'steaming',
-            'ingredients', 'seasoning', 'spices', 'herbs', 'sauce', 'marinade', 'dressing',
-            'technique', 'method', 'temperature', 'timing', 'preparation', 'cooking time',
-            'oven', 'stovetop', 'grill', 'pan', 'pot', 'skillet', 'knife', 'cutting',
-            'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'paleo', 'diet',
-            'appetizer', 'main course', 'dessert', 'breakfast', 'lunch', 'dinner',
-            'cuisine', 'italian', 'chinese', 'mexican', 'french', 'indian', 'thai',
-            'substitution', 'alternative', 'variation', 'modification', 'adaptation',
-            'troubleshooting', 'tips', 'tricks', 'hacks', 'mistakes', 'common errors'
-        ]
+        # Enhanced cooking keywords with categories
+        self.cooking_keywords = {
+            'primary': [
+                'recipe', 'cooking', 'baking', 'roasting', 'grilling', 'frying', 'boiling', 'steaming',
+                'sautéing', 'braising', 'poaching', 'broiling', 'searing', 'simmering'
+            ],
+            'ingredients': [
+                'ingredients', 'seasoning', 'spices', 'herbs', 'sauce', 'marinade', 'dressing',
+                'oil', 'butter', 'flour', 'sugar', 'salt', 'pepper', 'garlic', 'onion',
+                'vegetables', 'meat', 'chicken', 'beef', 'pork', 'fish', 'seafood'
+            ],
+            'techniques': [
+                'technique', 'method', 'temperature', 'timing', 'preparation', 'cooking time',
+                'prep time', 'total time', 'servings', 'difficulty', 'skill level'
+            ],
+            'equipment': [
+                'oven', 'stovetop', 'grill', 'pan', 'pot', 'skillet', 'knife', 'cutting',
+                'mixing', 'stirring', 'chopping', 'dicing', 'slicing', 'whisking'
+            ],
+            'dietary': [
+                'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'paleo', 'diet',
+                'healthy', 'low-carb', 'low-fat', 'protein', 'fiber'
+            ],
+            'meal_types': [
+                'appetizer', 'main course', 'dessert', 'breakfast', 'lunch', 'dinner',
+                'snack', 'side dish', 'soup', 'salad', 'pasta', 'pizza'
+            ],
+            'cuisines': [
+                'italian', 'chinese', 'mexican', 'french', 'indian', 'thai', 'japanese',
+                'mediterranean', 'american', 'asian', 'european', 'fusion'
+            ],
+            'modifications': [
+                'substitution', 'alternative', 'variation', 'modification', 'adaptation',
+                'troubleshooting', 'tips', 'tricks', 'hacks', 'mistakes', 'common errors'
+            ]
+        }
+        
+        # Flatten all keywords for easy lookup
+        self.all_cooking_keywords = []
+        for category, keywords in self.cooking_keywords.items():
+            self.all_cooking_keywords.extend(keywords)
     
     def process_results(self, results: List[Dict], user_query: str) -> Tuple[str, Dict[int, str]]:
         """Process search results and create comprehensive cooking summary"""
@@ -62,37 +92,67 @@ class CookingSearchProcessor:
         return relevant_results[:10]
     
     def _calculate_relevance_score(self, result: Dict, user_query: str) -> float:
-        """Calculate cooking relevance score for a result"""
+        """Calculate enhanced cooking relevance score for a result"""
         score = 0.0
         
-        # Check title relevance
+        # Check title and content relevance
         title = result.get('title', '').lower()
+        content = result.get('content', '').lower()
         query_lower = user_query.lower()
         
-        # Direct query match in title
-        if any(word in title for word in query_lower.split()):
-            score += 0.4
+        # Direct query match in title (highest priority)
+        query_words = query_lower.split()
+        title_matches = sum(1 for word in query_words if word in title)
+        if title_matches > 0:
+            score += min(title_matches * 0.15, 0.4)
         
-        # Cooking keyword match in title
-        cooking_matches = sum(1 for keyword in self.cooking_keywords if keyword in title)
-        score += min(cooking_matches * 0.1, 0.3)
+        # Direct query match in content
+        content_matches = sum(1 for word in query_words if word in content)
+        if content_matches > 0:
+            score += min(content_matches * 0.05, 0.2)
         
-        # Domain credibility for cooking sources
+        # Enhanced cooking keyword scoring by category
+        for category, keywords in self.cooking_keywords.items():
+            category_matches = sum(1 for keyword in keywords if keyword in title)
+            if category_matches > 0:
+                # Different weights for different categories
+                if category == 'primary':
+                    score += min(category_matches * 0.08, 0.25)
+                elif category == 'ingredients':
+                    score += min(category_matches * 0.06, 0.2)
+                elif category == 'techniques':
+                    score += min(category_matches * 0.07, 0.2)
+                elif category == 'cuisines':
+                    score += min(category_matches * 0.05, 0.15)
+                else:
+                    score += min(category_matches * 0.04, 0.1)
+        
+        # Domain credibility for cooking sources (enhanced list)
         url = result.get('url', '').lower()
         credible_domains = [
             'allrecipes.com', 'foodnetwork.com', 'epicurious.com', 'seriouseats.com',
             'bonappetit.com', 'cooking.nytimes.com', 'tasteofhome.com', 'food.com',
             'bbcgoodfood.com', 'jamieoliver.com', 'gordonramsay.com', 'marthastewart.com',
-            'kingarthurbaking.com', 'sallysbakingaddiction.com', 'smittenkitchen.com'
+            'kingarthurbaking.com', 'sallysbakingaddiction.com', 'smittenkitchen.com',
+            'food52.com', 'cookinglight.com', 'eatingwell.com', 'delish.com',
+            'tasty.co', 'buzzfeed.com/food', 'foodandwine.com', 'saveur.com'
         ]
         
         if any(domain in url for domain in credible_domains):
-            score += 0.3
+            score += 0.25
         
         # Source type bonus for cooking
         source = result.get('source', '')
         if 'cooking' in source or 'recipe' in source or any(domain in source for domain in credible_domains):
-            score += 0.2
+            score += 0.15
+        
+        # Recipe-specific content bonus
+        if any(word in title for word in ['recipe', 'how to', 'tutorial', 'guide']):
+            score += 0.1
+        
+        # URL path analysis for cooking content
+        if any(path in url for path in ['/recipe/', '/recipes/', '/cooking/', '/food/']):
+            score += 0.1
         
         return min(score, 1.0)
     
@@ -174,11 +234,13 @@ class CookingSearchProcessor:
         return combined_summary
     
     def _group_by_topic(self, results: List[Dict]) -> Dict[str, List[Dict]]:
-        """Group results by cooking topic"""
+        """Group results by enhanced cooking topics"""
         topics = {
             'recipes': [],
             'techniques': [],
             'ingredients': [],
+            'equipment': [],
+            'tips_tricks': [],
             'general': []
         }
         
@@ -187,13 +249,17 @@ class CookingSearchProcessor:
             summary_lower = result.get('summary', '').lower()
             content_lower = f"{title_lower} {summary_lower}"
             
-            # Categorize by content
-            if any(word in content_lower for word in ['recipe', 'ingredients', 'instructions', 'steps']):
+            # Enhanced categorization by content
+            if any(word in content_lower for word in ['recipe', 'ingredients', 'instructions', 'steps', 'how to make']):
                 topics['recipes'].append(result)
-            elif any(word in content_lower for word in ['technique', 'method', 'how to', 'cooking']):
+            elif any(word in content_lower for word in ['technique', 'method', 'how to cook', 'cooking method', 'preparation']):
                 topics['techniques'].append(result)
-            elif any(word in content_lower for word in ['ingredients', 'substitution', 'alternative', 'variation']):
+            elif any(word in content_lower for word in ['ingredients', 'substitution', 'alternative', 'variation', 'seasoning', 'spices']):
                 topics['ingredients'].append(result)
+            elif any(word in content_lower for word in ['equipment', 'tools', 'knife', 'pan', 'pot', 'oven', 'grill']):
+                topics['equipment'].append(result)
+            elif any(word in content_lower for word in ['tips', 'tricks', 'hacks', 'mistakes', 'troubleshooting', 'advice']):
+                topics['tips_tricks'].append(result)
             else:
                 topics['general'].append(result)
         
@@ -206,10 +272,12 @@ class CookingSearchProcessor:
         
         # Add topic header
         topic_headers = {
-            'recipes': "**Recipes and Instructions:**",
-            'techniques': "**Cooking Techniques:**",
-            'ingredients': "**Ingredients and Substitutions:**",
-            'general': "**General Information:**"
+            'recipes': "**🍳 Recipes and Instructions:**",
+            'techniques': "**👨‍🍳 Cooking Techniques:**",
+            'ingredients': "**🥘 Ingredients and Substitutions:**",
+            'equipment': "**🔪 Equipment and Tools:**",
+            'tips_tricks': "**💡 Tips and Tricks:**",
+            'general': "**📚 General Information:**"
         }
         
         header = topic_headers.get(topic, "**Information:**")
