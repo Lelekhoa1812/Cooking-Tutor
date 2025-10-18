@@ -1,0 +1,25 @@
+# requirements.txt - Cooking Tutor API
+# **LLMs**
+google-genai
+huggingface_hub
+# **Memory & Embeddings**
+faiss-cpu
+sentence-transformers
+# **Translation**
+transformers
+accelerate  
+sentencepiece
+# **Environment**
+python-dotenv
+# **Deployment**
+uvicorn
+fastapi
+torch               # For translation models
+psutil              # System monitoring
+# **Web Search**
+requests
+beautifulsoup4
+langdetect
+# **Data Processing**
+pandas
+numpy

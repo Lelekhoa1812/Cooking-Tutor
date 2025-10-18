@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Cooking Tutor</title>
+  <link rel="website icon" type="png" href="/public/img/logo.png">
+  <link rel="stylesheet" href="/src/styles.css">
+  <link rel="stylesheet" href="/src/credential.css">
+  <link rel="stylesheet" href="/src/imgmodal.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <!-- Language Selection Modal -->
+  <div id="language-modal">
+    <div class="modal-content">
+      <h2>Please select your preferred language</h2>
+      <button data-lang="EN">English</button>
+      <button data-lang="VI">Tiếng Việt</button>
+      <button data-lang="ZH">中文</button>
+    </div>
+  </div>
+
+  <header>
+    <nav class="navbar">
+      <a href="#" class="logo">
+        <img src="/img/logo.png" alt="logo">
+        <!-- Tooltip container using cloud.gif -->
+        <div id="tooltip" class="logo-tooltip">Hello, how can I support you today?</div>
+        <h1 id="nav-header">Cooking Tutor</h1>
+      </a>
+      <!-- Mobile Hamburger Menu -->
+      <button class="hamburger-menu" id="hamburger-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      
+      <!-- Desktop Navigation -->
+      <ul class="links desktop-nav">
+        <li><a id="nav-account">Account</a></li>
+        <li><a id="nav-subscription" href="subscription.html">Subscription</a></li>
+        <li><a id="nav-about" href="https://github.com/Lelekhoa1812/Medical-Chatbot-RAG">About</a></li>
+      </ul>
+      
+      <!-- Mobile Navigation Menu -->
+      <ul class="links mobile-nav" id="mobile-nav">
+        <li><a id="nav-account-mobile">Account</a></li>
+        <li><a id="nav-subscription-mobile" href="subscription.html">Subscription</a></li>
+        <li><a id="nav-about-mobile" href="https://github.com/Lelekhoa1812/Medical-Chatbot-RAG">About</a></li>
+      </ul>
+      
+      <!-- Always Visible Controls -->
+      <div class="navbar-controls">
+        <!-- Dropdown Language Selector -->
+        <div class="dropdown">
+          <button class="dropdown-btn">EN &#x25BC;</button>
+          <ul class="dropdown-menu">
+            <li data-lang="VI">Vietnamese</li>
+            <li data-lang="EN">English</li>
+            <li data-lang="ZH">Mandarin</li>
+          </ul>
+        </div>
+        <!-- Theme Toggle -->
+        <button class="theme-toggle" id="theme-toggle" title="Toggle theme">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Login/Register Modal -->
+  <div class="modal2-overlay" id="loginRegisterModal" style="display: none">
+    <div class="modal2-wrapper">
+        <!-- Login Section -->
+        <div class="modal2-section login-section" id="loginSection">
+            <h6>LOGIN</h6>
+            <div class="modal2-content">
+                <input type="text" id="userName" placeholder="Your username" class="modal2-input">
+                <!-- Change type to password to visually display as ••• -->
+                <input type="password" id="userPassword" placeholder="Password must be at least 8 characters" class="modal2-input">
+                <button id="loginBtn" class="modal2-button">Login</button>
+                <button id="showRegisterBtn" class="modal2-button">Register My User Account</button>
+            </div>
+        </div>
+        <!-- Register Section -->
+        <div class="modal2-section register-section collapsed" id="registerSection">
+            <h7>REGISTER</h7>
+            <div class="modal2-content">
+                <input type="text" id="newUserName" placeholder="Your username" class="modal2-input">
+                <!-- Change type to password to visually display as ••• -->
+                <input type="password" id="newUserPassword" placeholder="Password must be at least 8 characters" class="modal2-input">
+                <button id="createAccountBtn" class="modal2-button">Create My User Account</button>
+                <button id="showLoginBtn" class="modal2-button">Back to Login</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+  <!-- Notification Toast -->
+  <div id="notification-toast" class="notification-toast hidden">
+    <div class="notification-content">
+      <i class="notification-icon"></i>
+      <span class="notification-message"></span>
+      <button class="notification-close">&times;</button>
+    </div>
+  </div>
+
+  <div class="chat-container">
+    <div id="chat-header" class="chat-header">
+      <div class="header-content">
+        <div class="header-title">Cooking Tutor</div>
+        <div class="header-actions">
+          <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span class="status-text">Online</span>
+          </div>
+          <button class="header-action-btn" id="clear-history-btn" title="Clear Chat History">
+            <i class="fas fa-trash"></i>
+          </button>
+          <button class="header-action-btn" id="settings-btn" title="Settings">
+            <i class="fas fa-cog"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <!-- Welcome Screen (visible initially) -->
+      <div id="welcome-container">
+        <img src="/img/logo.png" alt="Cooking Tutor Logo">
+        <p id="welcome-text">Hi! I’m your friendly cooking tutor. Ask me for recipes, techniques, substitutions, and step-by-step guidance for any dish.</p>
+        <h1 id="acknowledgement">Credits</h1>
+        <p id="author">Author: (Liam) Dang Khoa Le</p>
+        <a id="license" href="https://github.com/Lelekhoa1812/Medical-Chatbot-RAG/blob/main/LICENSE">License: Apache 2.0 License</a>
+      </div>
+    </div>
+    <!-- Image modal removed for cooking theme -->
+    <!-- Enhanced chat input with modes -->
+    <div class="chat-input">
+      <!-- Mode Selection -->
+      <div class="input-modes">
+        <button class="mode-btn" data-mode="search" id="search-mode-btn">
+          <i class="fas fa-search"></i>
+          Search
+        </button>
+        <!-- Upload mode removed for cooking theme -->
+        <button class="mode-btn" data-mode="video" id="video-mode-btn">
+          <i class="fas fa-video"></i>
+          Video
+        </button>
+      </div>
+      
+      <!-- Input Container -->
+      <div class="input-container">
+        <textarea
+          id="user-input"
+          placeholder="Type your question here..."
+          rows="1"
+        ></textarea>
+        <!-- Upload label removed for cooking theme -->
+        <button id="send-btn" class="send-btn">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Include Marked.js for markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- Main scripts -->
+  <script type="module" src="/src/script.js?v=2.4.0"></script>
+  <script type="module" src="/src/credential.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<<<<<<< HEAD
+# Utils
+Miniconda3.sh
+storage.md
+
+# Backend
+backend/secrets.toml
+backend/.env
+backend/.git
+
+# Frontend
+static/dist
+static/node_modules
+static/.vercel
+=======
+.env
+secrets.toml
+>>>>>>> hf/main
