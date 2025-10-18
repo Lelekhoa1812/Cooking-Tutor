@@ -16,7 +16,15 @@ logger = logging.getLogger("rag-agent")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(name)s — %(levelname)s — %(message)s", force=True) # Change INFO to DEBUG for full-ctx JSON loader
 
 api_key = os.getenv("FlashAPI")
-client = genai.Client(api_key=api_key)
+# Initialize client lazily to avoid errors during import
+client = None
+
+def get_genai_client():
+    """Get or create Gemini client"""
+    global client
+    if client is None and api_key:
+        client = genai.Client(api_key=api_key)
+    return client
 
 class MemoryManager:
     def __init__(self, max_users=1000, history_per_user=20, max_chunks=60):

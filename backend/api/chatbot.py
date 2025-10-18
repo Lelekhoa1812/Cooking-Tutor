@@ -15,16 +15,32 @@ class GeminiClient:
     """Gemini API client for generating responses"""
     
     def __init__(self):
-        self.client = genai.Client(api_key=gemini_flash_api_key)
+        if not gemini_flash_api_key:
+            logger.warning("FlashAPI not set - Gemini client will use fallback responses")
+            self.client = None
+        else:
+            self.client = genai.Client(api_key=gemini_flash_api_key)
     
     def generate_content(self, prompt: str, model: str = "gemini-2.5-flash", temperature: float = 0.7) -> str:
         """Generate content using Gemini API"""
+        if not self.client:
+            return self._generate_fallback_response(prompt)
+        
         try:
             response = self.client.models.generate_content(model=model, contents=prompt)
             return response.text
         except Exception as e:
             logger.error(f"[LLM] ❌ Error calling Gemini API: {e}")
-            return "Error generating response from Gemini."
+            return self._generate_fallback_response(prompt)
+    
+    def _generate_fallback_response(self, prompt: str) -> str:
+        """Generate a simple fallback response when Gemini API is not available"""
+        # Extract the user's cooking question from the prompt
+        if "User's cooking question:" in prompt:
+            question_part = prompt.split("User's cooking question:")[-1].split("\n")[0].strip()
+            return f"I'd be happy to help you with your cooking question: '{question_part}'. However, I'm currently unable to access my full cooking knowledge base. Please try again later or contact support."
+        else:
+            return "I'm a cooking tutor, but I'm currently unable to access my full knowledge base. Please try again later."
 
 class CookingTutorChatbot:
     """Cooking tutor chatbot that uses only web search + memory."""

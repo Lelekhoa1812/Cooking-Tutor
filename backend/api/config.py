@@ -4,13 +4,16 @@ import logging
 import psutil
 from typing import List
 
+logger = logging.getLogger(__name__)
+
 # ✅ Environment Variables
 gemini_flash_api_key = os.getenv("FlashAPI")
 
 # Validate environment endpoint (only when actually running the app)
 def validate_environment():
     if not gemini_flash_api_key:
-        raise ValueError("❌ Missing FlashAPI key for Gemini. Set env var FlashAPI.")
+        logger.warning("⚠️ FlashAPI key not set - cooking tutor will use fallback responses")
+        # Don't raise error, just warn - app can run with fallback responses
 
 # ✅ Logging Configuration
 def setup_logging():

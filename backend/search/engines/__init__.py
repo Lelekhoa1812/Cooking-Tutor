@@ -1,6 +1,6 @@
 from .duckduckgo import DuckDuckGoEngine
-from .medical import MedicalSearchEngine
-from .multilingual import MultilingualMedicalEngine
+from .cooking import CookingSearchEngine
+from .multilingual import MultilingualCookingEngine
 from .video import VideoSearchEngine
 
-__all__ = ['DuckDuckGoEngine', 'MedicalSearchEngine', 'MultilingualMedicalEngine', 'VideoSearchEngine']
+__all__ = ['DuckDuckGoEngine', 'CookingSearchEngine', 'MultilingualCookingEngine', 'VideoSearchEngine']
