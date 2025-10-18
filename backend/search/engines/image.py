@@ -18,14 +18,17 @@ class ImageSearchEngine:
         self.timeout = timeout
     
     def search_cooking_images(self, query: str, num_results: int = 3, language: str = "en") -> List[Dict]:
-        """Search for cooking-related images with robust error handling"""
+        """Search for diverse cooking-related images including ingredients, techniques, and final dishes"""
         if not query or not query.strip():
             logger.warning("Empty query provided for image search")
             return []
         
-        results = []
+        # Generate diverse search queries for comprehensive visual coverage
+        search_queries = self._generate_diverse_cooking_queries(query, num_results)
         
-        # Try multiple image search strategies
+        all_results = []
+        
+        # Try multiple image search strategies with diverse queries
         strategies = [
             self._search_google_images,
             self._search_bing_images,
@@ -34,25 +37,124 @@ class ImageSearchEngine:
         
         for strategy in strategies:
             try:
-                strategy_results = strategy(query, num_results, language)
+                strategy_results = []
+                for search_query in search_queries:
+                    query_results = strategy(search_query['query'], search_query['max_results'], language)
+                    if query_results:
+                        # Add query context to results
+                        for result in query_results:
+                            result['query_context'] = search_query['context']
+                            result['image_type'] = search_query['type']
+                        strategy_results.extend(query_results)
+                
                 if strategy_results:
                     # Filter and validate results
                     valid_results = self._validate_image_results(strategy_results)
                     if valid_results:
-                        results.extend(valid_results)
+                        all_results.extend(valid_results)
                         logger.info(f"Image search strategy found {len(valid_results)} valid results")
-                        if len(results) >= num_results:
+                        if len(all_results) >= num_results * 2:  # Get more to filter
                             break
             except Exception as e:
                 logger.warning(f"Image search strategy failed: {e}")
                 continue
         
-        # Remove duplicates and return
-        unique_results = self._remove_duplicate_images(results)
-        final_results = unique_results[:num_results]
+        # Remove duplicates and prioritize diverse results
+        unique_results = self._remove_duplicate_images(all_results)
+        diverse_results = self._prioritize_diverse_images(unique_results, num_results)
         
-        logger.info(f"Image search completed: {len(final_results)} unique results from {len(results)} total")
-        return final_results
+        logger.info(f"Image search completed: {len(diverse_results)} diverse results from {len(all_results)} total")
+        return diverse_results
+    
+    def _generate_diverse_cooking_queries(self, original_query: str, num_results: int) -> List[Dict]:
+        """Generate diverse search queries for comprehensive cooking image coverage"""
+        queries = []
+        
+        # Extract key cooking terms from the original query
+        query_lower = original_query.lower()
+        
+        # 1. Final dish query (original focus)
+        final_dish_query = f"{original_query} final dish completed recipe"
+        queries.append({
+            'query': final_dish_query,
+            'context': 'final_dish',
+            'type': 'final_dish',
+            'max_results': max(1, num_results // 3)
+        })
+        
+        # 2. Ingredients query
+        ingredients_query = f"{original_query} ingredients fresh raw materials"
+        queries.append({
+            'query': ingredients_query,
+            'context': 'ingredients',
+            'type': 'ingredients',
+            'max_results': max(1, num_results // 3)
+        })
+        
+        # 3. Cooking technique/process query
+        technique_query = f"{original_query} cooking technique process step by step"
+        queries.append({
+            'query': technique_query,
+            'context': 'technique',
+            'type': 'technique',
+            'max_results': max(1, num_results // 3)
+        })
+        
+        # Add more specific queries based on the original query content
+        if any(keyword in query_lower for keyword in ['pad thai', 'noodles', 'pasta']):
+            queries.append({
+                'query': f"{original_query} noodle preparation cooking technique",
+                'context': 'noodle_technique',
+                'type': 'technique',
+                'max_results': 1
+            })
+        
+        if any(keyword in query_lower for keyword in ['fusion', 'western', 'technique']):
+            queries.append({
+                'query': f"{original_query} fusion cooking western technique",
+                'context': 'fusion_technique',
+                'type': 'technique',
+                'max_results': 1
+            })
+        
+        return queries
+    
+    def _prioritize_diverse_images(self, results: List[Dict], num_results: int) -> List[Dict]:
+        """Prioritize diverse image types for better visual instruction"""
+        # Group results by type
+        type_groups = {
+            'final_dish': [],
+            'ingredients': [],
+            'technique': [],
+            'other': []
+        }
+        
+        for result in results:
+            image_type = result.get('image_type', 'other')
+            if image_type in type_groups:
+                type_groups[image_type].append(result)
+            else:
+                type_groups['other'].append(result)
+        
+        # Select diverse results
+        diverse_results = []
+        
+        # Prioritize: 1 final dish, 1 ingredients, 1 technique, then fill with others
+        if type_groups['final_dish']:
+            diverse_results.append(type_groups['final_dish'][0])
+        if type_groups['ingredients'] and len(diverse_results) < num_results:
+            diverse_results.append(type_groups['ingredients'][0])
+        if type_groups['technique'] and len(diverse_results) < num_results:
+            diverse_results.append(type_groups['technique'][0])
+        
+        # Fill remaining slots with other results
+        all_remaining = []
+        for group in type_groups.values():
+            all_remaining.extend(group[1:])  # Skip first item (already used)
+        
+        diverse_results.extend(all_remaining[:num_results - len(diverse_results)])
+        
+        return diverse_results[:num_results]
     
     def _validate_image_results(self, results: List[Dict]) -> List[Dict]:
         """Validate and clean image results"""

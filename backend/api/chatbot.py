@@ -18,7 +18,7 @@ class GeminiClient:
             logger.warning("FlashAPI not set - Gemini client will use fallback responses")
             self.client = None
         else:
-            self.client = genai.Client(api_key=gemini_flash_api_key)
+        self.client = genai.Client(api_key=gemini_flash_api_key)
     
     def generate_content(self, prompt: str, model: str = "gemini-2.5-flash", temperature: float = 0.7) -> str:
         """Generate content using Gemini API"""
@@ -230,13 +230,18 @@ class CookingTutorChatbot:
             title = image.get('title', '')
             source_url = image.get('source_url', '')
             source = image.get('source', 'unknown')
+            image_type = image.get('image_type', 'general')
+            query_context = image.get('query_context', 'general')
+            
+            # Set current image type for caption generation
+            self._current_image_type = image_type
             
             # Generate contextual alt text and caption
             alt_text = self._generate_image_alt_text(title, query, i)
             caption = self._generate_image_caption(title, query, i)
             
-            # Determine image placement context
-            placement_context = self._determine_image_placement(query, i)
+            # Determine image placement context based on image type
+            placement_context = self._determine_image_placement_by_type(image_type, query, i)
             
             enhanced_image = {
                 'id': f"img_{i+1}",
@@ -250,12 +255,26 @@ class CookingTutorChatbot:
                 'display_order': i + 1,
                 'aspect_ratio': '16:9',  # Default, can be detected later
                 'loading': 'lazy',  # For performance
-                'type': 'cooking_image'
+                'type': 'cooking_image',
+                'image_type': image_type,
+                'query_context': query_context
             }
             
             enhanced_images.append(enhanced_image)
         
         return enhanced_images
+    
+    def _determine_image_placement_by_type(self, image_type: str, query: str, index: int) -> str:
+        """Determine image placement based on image type for optimal inline display"""
+        if image_type == 'ingredients':
+            return 'after_ingredients'
+        elif image_type == 'technique':
+            return 'after_instructions'
+        elif image_type == 'final_dish':
+            return 'after_tips'
+        else:
+            # Fallback to original logic
+            return self._determine_image_placement(query, index)
     
     def _generate_image_alt_text(self, title: str, query: str, index: int) -> str:
         """Generate descriptive alt text for accessibility"""
@@ -274,36 +293,72 @@ class CookingTutorChatbot:
             return f"Related cooking image {index + 1}"
     
     def _generate_image_caption(self, title: str, query: str, index: int) -> str:
-        """Generate contextual caption for the image"""
+        """Generate contextual caption for the image based on image type"""
         if title and len(title) > 5:
             return title
         
-        # Generate contextual captions
-        query_lower = query.lower()
-        if 'pad thai' in query_lower:
-            return f"Pad Thai cooking example {index + 1}"
-        elif 'fusion' in query_lower:
-            return f"Fusion cooking inspiration {index + 1}"
-        elif 'western' in query_lower:
-            return f"Western cooking technique {index + 1}"
-        else:
-            return f"Related cooking example {index + 1}"
-    
-    def _determine_image_placement(self, query: str, index: int) -> str:
-        """Determine where the image should be placed in the text"""
+        # Generate contextual captions based on image type
         query_lower = query.lower()
         
+        # Check if we have image type information
+        image_type = getattr(self, '_current_image_type', 'general')
+        
+        if image_type == 'ingredients':
+            if 'pad thai' in query_lower:
+                return "Fresh ingredients for Pad Thai"
+            elif 'fusion' in query_lower:
+                return "Ingredients for fusion cooking"
+            else:
+                return f"Fresh ingredients {index + 1}"
+        elif image_type == 'technique':
+            if 'pad thai' in query_lower:
+                return "Pad Thai cooking technique"
+            elif 'fusion' in query_lower:
+                return "Fusion cooking technique"
+            else:
+                return f"Cooking technique {index + 1}"
+        elif image_type == 'final_dish':
+            if 'pad thai' in query_lower:
+                return "Completed Pad Thai dish"
+            elif 'fusion' in query_lower:
+                return "Fusion cooking result"
+            else:
+                return f"Final dish {index + 1}"
+        else:
+            # Fallback to original logic
+            if 'pad thai' in query_lower:
+                return f"Pad Thai cooking example {index + 1}"
+            elif 'fusion' in query_lower:
+                return f"Fusion cooking inspiration {index + 1}"
+            elif 'western' in query_lower:
+                return f"Western cooking technique {index + 1}"
+            else:
+                return f"Related cooking example {index + 1}"
+    
+    def _determine_image_placement(self, query: str, index: int) -> str:
+        """Determine where the image should be placed in the text for optimal inline display"""
+        query_lower = query.lower()
+        
+        # More intelligent placement based on content type and image index
         if index == 0:
-            if 'recipe' in query_lower or 'ingredient' in query_lower:
+            # First image: place early in the content for immediate visual impact
+            if any(keyword in query_lower for keyword in ['ingredient', 'ingredients', 'what you need']):
                 return 'after_ingredients'
-            elif 'technique' in query_lower or 'method' in query_lower:
+            elif any(keyword in query_lower for keyword in ['technique', 'method', 'how to']):
                 return 'after_technique_intro'
+            elif any(keyword in query_lower for keyword in ['recipe', 'cook', 'make']):
+                return 'after_intro'
             else:
                 return 'after_intro'
         elif index == 1:
+            # Second image: place in the middle of instructions
             return 'after_instructions'
-        else:
+        elif index == 2:
+            # Third image: place after tips or at the end
             return 'after_tips'
+        else:
+            # Additional images: distribute evenly
+            return 'after_instructions'
     
     def _integrate_images_inline(self, text: str, images: List[Dict]) -> str:
         """Integrate images inline with text using placeholders for frontend rendering"""
@@ -327,16 +382,25 @@ class CookingTutorChatbot:
         for line in lines:
             line_lower = line.lower().strip()
             
-            # Detect section types
-            if any(keyword in line_lower for keyword in ['ingredients:', 'ingredient list:', 'what you need:']):
+            # Detect section types with more comprehensive patterns
+            if any(keyword in line_lower for keyword in [
+                'ingredients:', 'ingredient list:', 'what you need:', 'materials:', 
+                'you will need:', 'ingredients list:', 'for this recipe:'
+            ]):
                 if current_section['content'].strip():
                     sections.append(current_section)
                 current_section = {'type': 'ingredients', 'content': line + '\n', 'images': []}
-            elif any(keyword in line_lower for keyword in ['instructions:', 'directions:', 'how to cook:', 'steps:']):
+            elif any(keyword in line_lower for keyword in [
+                'instructions:', 'directions:', 'how to cook:', 'steps:', 'method:',
+                'cooking steps:', 'preparation:', 'how to make:', 'procedure:'
+            ]):
                 if current_section['content'].strip():
                     sections.append(current_section)
                 current_section = {'type': 'instructions', 'content': line + '\n', 'images': []}
-            elif any(keyword in line_lower for keyword in ['tips:', 'troubleshooting:', 'notes:', 'variations:']):
+            elif any(keyword in line_lower for keyword in [
+                'tips:', 'troubleshooting:', 'notes:', 'variations:', 'suggestions:',
+                'pro tips:', 'helpful hints:', 'cooking tips:', 'advice:'
+            ]):
                 if current_section['content'].strip():
                     sections.append(current_section)
                 current_section = {'type': 'tips', 'content': line + '\n', 'images': []}
@@ -482,8 +546,8 @@ class CookingTutorChatbot:
                 doc_id = extract_numeric_id(citation_id)
                 
                 if doc_id is not None and doc_id in url_mapping:
-                    url = url_mapping[doc_id]
-                    urls.append(f'<{url}>')
+                        url = url_mapping[doc_id]
+                        urls.append(f'<{url}>')
                     logger.info(f"[CITATION] Replacing <#{citation_id}> with {url}")
                 else:
                     if doc_id is None:
@@ -506,7 +570,7 @@ class CookingTutorChatbot:
                 # Process citations with this pattern
                 processed_response = re.sub(pattern, replace_citation, processed_response)
                 total_citations_processed += sum(len([id_str.strip() for id_str in citation_content.split(',')]) 
-                                               for citation_content in citations_found)
+                            for citation_content in citations_found)
                 logger.info(f"[CITATION] Processed {len(citations_found)} citation groups with pattern: {pattern}")
         
         # Fallback: Handle any remaining malformed citations
