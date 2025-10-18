@@ -1,16 +1,15 @@
 ---
-title: Cooking Tutor API
-emoji: 🍳
+title: Cooking Tutor
+emoji: 👨‍🍳
 colorFrom: orange
 colorTo: red
 sdk: docker
-pinned: false
-license: mit
-app_port: 7860
-short_description: AI-powered cooking tutor with multilingual support
+sdk_version: latest
+license: apache-2.0
+short_description: CookTut with WebSearch, Memory, Multilingual
 ---
 
-# 🍳 Cooking Tutor API
+# Cooking Tutor Backend
 
 An intelligent cooking assistant that provides personalized recipe guidance, cooking techniques, and culinary tips with multilingual support (English, Vietnamese, Chinese).
 
