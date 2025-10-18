@@ -3,9 +3,7 @@
 const isLocal = window.location.hostname === "localhost";
 const API_PREFIX = isLocal
   ? "http://0.0.0.0:8000"  // local dev
-//   : "https://my-medical-chatbot.onrender.com";     // production Render server
-//   : "https://medical-chatbot-henna.streamlit.app"; // production Streamlit server
-     : "https://BinKhoaLe1812-Medical-Chatbot.hf.space"
+  : "https://binkhoale1812-cooking-tutor.hf.space"  // production HuggingFace Space
 
 
 // Test markdown rendering
@@ -164,7 +162,7 @@ function clearChatHistory() {
                 <p id="welcome-text">${translations[currentLang].welcomeText}</p>
                 <h1 id="acknowledgement">${translations[currentLang].acknowledgement}</h1>
                 <p id="author">${translations[currentLang].author}</p>
-                <a id="license" href="https://github.com/Lelekhoa1812/Medical-Chatbot-RAG/blob/main/LICENSE">${translations[currentLang].license}</a>
+                <a id="license" href="https://github.com/Lelekhoa1812/Cooking-Tutor/blob/main/LICENSE">${translations[currentLang].license}</a>
             </div>`;
         messagesDiv.innerHTML = welcomeHTML;
         
