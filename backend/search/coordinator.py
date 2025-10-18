@@ -36,11 +36,11 @@ class SearchCoordinator:
         self.enhanced_processor = EnhancedContentProcessor()
         self.reranker = None  # No complex reranking needed for cooking content
         
-        # Search strategies
+        # Search strategies - prioritize cooking sources first
         self.strategies = [
-            self._search_multilingual,
+            self._search_cooking_sources,
             self._search_duckduckgo,
-            self._search_cooking_sources
+            self._search_multilingual
         ]
     
     def search(self, query: str, num_results: int = 10, target_language: str = None) -> Tuple[str, Dict[int, str]]:
@@ -179,27 +179,39 @@ class SearchCoordinator:
         """Quick search for basic results without content extraction"""
         logger.info(f"Quick search for: {query}")
         
-        # Use only DuckDuckGo for speed
-        results = self.duckduckgo_engine.search(query, num_results)
+        # Try cooking sources first for better relevance
+        results = []
+        try:
+            cooking_results = self.cooking_engine.search(query, num_results)
+            if cooking_results:
+                results = cooking_results
+                logger.info(f"Cooking engine found {len(results)} results")
+        except Exception as e:
+            logger.warning(f"Cooking engine failed: {e}")
+        
+        # If no cooking results, try DuckDuckGo
+        if not results:
+            logger.info("No cooking results, trying DuckDuckGo")
+            results = self.duckduckgo_engine.search(query, num_results)
         
         # If no results, try with simplified query
         if not results:
-            logger.warning("No results from DuckDuckGo, trying simplified query")
+            logger.warning("No results from search engines, trying simplified query")
             simplified_query = self._simplify_query(query)
             if simplified_query != query:
-                results = self.duckduckgo_engine.search(simplified_query, num_results)
-                logger.info(f"Simplified query '{simplified_query}' found {len(results)} results")
-        
-        # If still no results, try cooking engine as fallback
-        if not results:
-            logger.warning("Still no results, trying cooking engine fallback")
-            try:
-                cooking_results = self.cooking_engine.search(query, num_results)
-                if cooking_results:
-                    results = cooking_results
-                    logger.info(f"Cooking engine fallback found {len(results)} results")
-            except Exception as e:
-                logger.warning(f"Cooking engine fallback failed: {e}")
+                # Try cooking sources first with simplified query
+                try:
+                    cooking_results = self.cooking_engine.search(simplified_query, num_results)
+                    if cooking_results:
+                        results = cooking_results
+                        logger.info(f"Simplified cooking query '{simplified_query}' found {len(results)} results")
+                except Exception as e:
+                    logger.warning(f"Simplified cooking query failed: {e}")
+                
+                # If still no results, try DuckDuckGo with simplified query
+                if not results:
+                    results = self.duckduckgo_engine.search(simplified_query, num_results)
+                    logger.info(f"Simplified DuckDuckGo query '{simplified_query}' found {len(results)} results")
         
         # Remove duplicates
         unique_results = self._remove_duplicates(results)

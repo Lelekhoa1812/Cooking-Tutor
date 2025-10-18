@@ -24,7 +24,7 @@ class DuckDuckGoEngine:
         self.reranker = None  # No complex reranking needed for cooking content
     
     def search(self, query: str, num_results: int = 10) -> List[Dict]:
-        """Search with multiple DuckDuckGo strategies and medical focus"""
+        """Search with multiple DuckDuckGo strategies and cooking focus"""
         # Clean and simplify the query first
         clean_query = self._clean_query(query)
         logger.info(f"Cleaned query: '{query}' -> '{clean_query}'")
@@ -32,7 +32,7 @@ class DuckDuckGoEngine:
         results = []
         min_score = 0.15  # Reduced from 0.3 to be less strict
         
-        # Strategy 1: HTML Interface with medical focus
+        # Strategy 1: HTML Interface with cooking focus
         html_results = self._search_html(clean_query, num_results * 3)  # Get more to filter
         if html_results:
             results.extend(html_results)
@@ -108,28 +108,32 @@ class DuckDuckGoEngine:
         return cleaned.strip()
     
     def _simplify_query(self, query: str) -> str:
-        """Simplify query to core medical terms"""
+        """Simplify query to core cooking terms"""
         if not query:
             return ""
         
-        # Extract key medical terms
+        # Extract key cooking terms
         import re
         words = query.split()
         
-        # Keep medical keywords and important terms
-        medical_keywords = [
-            'migraine', 'headache', 'pain', 'treatment', 'therapy', 'medication', 'drug',
-            'chronic', 'acute', 'symptoms', 'diagnosis', 'prevention', 'management',
-            'disease', 'condition', 'syndrome', 'disorder', 'infection', 'inflammation',
-            'blood', 'heart', 'lung', 'brain', 'liver', 'kidney', 'diabetes', 'cancer',
-            'covid', 'flu', 'cold', 'fever', 'cough', 'breathing', 'chest', 'stomach'
+        # Keep cooking keywords and important terms
+        cooking_keywords = [
+            'recipe', 'cooking', 'baking', 'roasting', 'grilling', 'frying', 'boiling', 'steaming',
+            'ingredients', 'seasoning', 'spices', 'herbs', 'sauce', 'marinade', 'dressing',
+            'technique', 'method', 'temperature', 'timing', 'preparation', 'cooking time',
+            'oven', 'stovetop', 'grill', 'pan', 'pot', 'skillet', 'knife', 'cutting',
+            'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'paleo', 'diet',
+            'appetizer', 'main course', 'dessert', 'breakfast', 'lunch', 'dinner',
+            'cuisine', 'italian', 'chinese', 'mexican', 'french', 'indian', 'thai',
+            'substitution', 'alternative', 'variation', 'modification', 'adaptation',
+            'troubleshooting', 'tips', 'tricks', 'hacks', 'mistakes', 'common errors'
         ]
         
-        # Keep words that are medical keywords or are important (longer than 3 chars)
+        # Keep words that are cooking keywords or are important (longer than 3 chars)
         important_words = []
         for word in words:
             word_lower = word.lower()
-            if word_lower in medical_keywords or len(word) > 3:
+            if word_lower in cooking_keywords or len(word) > 3:
                 important_words.append(word)
         
         # If we have important words, use them; otherwise use first few words
@@ -187,13 +191,13 @@ class DuckDuckGoEngine:
     def _search_html(self, query: str, num_results: int) -> List[Dict]:
         """Search using DuckDuckGo HTML interface with better error handling"""
         try:
-            # Try multiple DuckDuckGo endpoints
+            # Try multiple DuckDuckGo endpoints with improved error handling
             endpoints = [
                 {
                     'url': 'https://html.duckduckgo.com/html/',
                     'params': {
-                'q': query,
-                'kl': 'us-en',
+                        'q': query,
+                        'kl': 'us-en',
                         's': '0',
                         'dc': '1',
                         'v': 'l'
@@ -215,7 +219,8 @@ class DuckDuckGoEngine:
                 }
             ]
             
-            for endpoint in endpoints:
+            response = None
+            for i, endpoint in enumerate(endpoints):
                 try:
                     # Add random delay to avoid rate limiting
                     import time
@@ -246,14 +251,21 @@ class DuckDuckGoEngine:
                         logger.warning(f"DuckDuckGo rate limited, waiting...")
                         time.sleep(2)
                         continue
+                    elif response.status_code == 200:
+                        logger.info(f"DuckDuckGo endpoint {endpoint['url']} succeeded")
+                        break
+                    else:
+                        logger.warning(f"DuckDuckGo endpoint {endpoint['url']} returned {response.status_code}")
+                        continue
                     
                 except Exception as e:
                     logger.warning(f"DuckDuckGo endpoint {endpoint['url']} failed: {e}")
-                    if endpoint == endpoints[-1]:  # Last endpoint
-                        raise e
+                    if i == len(endpoints) - 1:  # Last endpoint
+                        logger.error("All DuckDuckGo endpoints failed")
+                        return []
                     continue
-            else:
-                # All endpoints failed
+            
+            if not response or response.status_code != 200:
                 logger.error("All DuckDuckGo endpoints failed")
                 return []
             
@@ -414,6 +426,15 @@ class DuckDuckGoEngine:
         except Exception as e:
             logger.warning(f"Startpage fallback failed: {e}")
         
+        # Try Google search as fallback
+        try:
+            google_results = self._search_google(query, num_results)
+            if google_results:
+                results.extend(google_results)
+                logger.info(f"Google fallback found {len(google_results)} results")
+        except Exception as e:
+            logger.warning(f"Google fallback failed: {e}")
+        
         # Try Searx instances as fallback
         try:
             searx_results = self._search_searx(query, num_results)
@@ -424,6 +445,65 @@ class DuckDuckGoEngine:
             logger.warning(f"Searx fallback failed: {e}")
         
         return results
+    
+    def _search_google(self, query: str, num_results: int) -> List[Dict]:
+        """Search using Google as fallback"""
+        try:
+            url = "https://www.google.com/search"
+            params = {
+                'q': query,
+                'num': min(num_results, 20),
+                'hl': 'en'
+            }
+            
+            headers = self.session.headers.copy()
+            headers.update({
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            })
+            
+            response = self.session.get(url, params=params, headers=headers, timeout=self.timeout)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            results = []
+            
+            # Google result selectors
+            selectors = [
+                'h3 a',
+                '.g a',
+                '.yuRUbf a'
+            ]
+            
+            for selector in selectors:
+                links = soup.select(selector)
+                if links:
+                    logger.info(f"Google found {len(links)} links with selector: {selector}")
+                    break
+            
+            for link in links[:num_results]:
+                try:
+                    href = link.get('href')
+                    if not href or href.startswith('#') or 'google.com' in href:
+                        continue
+                    
+                    title = link.get_text(strip=True)
+                    if title and href.startswith('http'):
+                        results.append({
+                            'url': href,
+                            'title': title,
+                            'source': 'google_fallback'
+                        })
+                except Exception as e:
+                    logger.debug(f"Error parsing Google link: {e}")
+                    continue
+            
+            return results
+            
+        except Exception as e:
+            logger.warning(f"Google search failed: {e}")
+            return []
     
     def _search_bing(self, query: str, num_results: int) -> List[Dict]:
         """Search using Bing as fallback"""
