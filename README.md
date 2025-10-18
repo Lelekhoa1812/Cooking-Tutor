@@ -4,7 +4,7 @@ Welcome to the AI-powered Cooking Tutor project! This platform leverages cutting
 
 ## Access Now
 - [Web App](https://cooking-tutor.vercel.app/)
-- [API Documentation](https://cooking-tutor-api.hf.space/docs)
+- [API Documentation](https://binkhoale1812-cooking-tutor.hf.space/docs)
 
 ## 🍳 Frontend Capabilities
 - Multilingual UX (EN/VI/ZH) with responsive design
@@ -50,8 +50,8 @@ Welcome to the AI-powered Cooking Tutor project! This platform leverages cutting
 
 | **Component** | **Hosting**           | **URL**                                           |
 |----------------|-----------------------|---------------------------------------------------|
-| Backend        | Hugging Face Spaces   | `https://cooking-tutor-api.hf.space/`            |
-| Frontend       | Vercel                | `https://cooking-tutor-henna.vercel.app`         |
+| Backend        | Hugging Face Spaces   | `https://binkhoale1812-cooking-tutor.hf.space/`            |
+| Frontend       | Vercel                | `https://cooking-tutor.vercel.app/`         |
 
 ## 📝 License
 This project is licensed under the [Apache 2.0 License](LICENSE).
