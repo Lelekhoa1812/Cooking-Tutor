@@ -204,6 +204,7 @@ class CookingTutorChatbot:
         if source_aggregation and 'images' in source_aggregation:
             images = source_aggregation['images']
             if images:
+                logger.info(f"Found {len(images)} images from search")
                 # Create enhanced image data with better frontend integration
                 enhanced_images = self._enhance_images_for_frontend(images[:3], user_query)
                 response_data['images'] = enhanced_images
@@ -214,6 +215,10 @@ class CookingTutorChatbot:
                 
                 # Keep original text for backward compatibility
                 response_data['text'] = response.strip()
+            else:
+                logger.warning("No images found in source aggregation")
+        else:
+            logger.warning("No source aggregation or images in response")
         
         # Return structured response if we have media, otherwise just text
         if len(response_data) > 1:
