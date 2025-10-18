@@ -5,11 +5,11 @@ colorFrom: orange
 colorTo: red
 sdk: docker
 sdk_version: latest
-pinned: false
 license: apache-2.0
-short_description: Cooking Tutor WebSearch, Memory, Multilingual
+short_description: CookTut with WebSearch, Memory, Multilingual
 ---
 
+---
 # Cooking Tutor Backend
 
 ## At-a-glance
