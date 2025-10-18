@@ -1,5 +1,5 @@
 ---
-title: Cooking Tutor API
+title: Cooking Tutor
 emoji: 👨‍🍳
 colorFrom: orange
 colorTo: red
@@ -7,7 +7,7 @@ sdk: docker
 sdk_version: latest
 pinned: false
 license: apache-2.0
-short_description: Cooking Tutor with WebSearch, Memory, Multilingual
+short_description: Cooking Tutor WebSearch, Memory, Multilingual
 ---
 
 # Cooking Tutor Backend
