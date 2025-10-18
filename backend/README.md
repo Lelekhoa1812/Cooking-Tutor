@@ -1,7 +1,7 @@
 ---
 title: Cooking Tutor
 emoji: 👨‍🍳
-colorFrom: orange
+colorFrom: yellow
 colorTo: red
 sdk: docker
 sdk_version: latest
