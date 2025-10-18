@@ -1,7 +1,7 @@
 # api/chatbot.py
 import re
 import logging
-from typing import Dict
+from typing import Dict, List
 from google import genai
 from .config import gemini_flash_api_key
 from memory import MemoryManager
