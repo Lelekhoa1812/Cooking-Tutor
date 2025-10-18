@@ -429,10 +429,47 @@ class CookingTutorChatbot:
         return structured_blocks
     
     def _process_citations(self, response: str, url_mapping: Dict[int, str]) -> str:
-        """Replace citation tags with actual URLs, handling both single and multiple references"""
+        """Replace citation tags with actual URLs, handling various citation formats flexibly"""
         
-        # Pattern to match both single citations <#1> and multiple citations <#1, #2, #5, #7, #9>
-        citation_pattern = r'<#([^>]+)>'
+        # More flexible pattern to match various citation formats
+        citation_patterns = [
+            r'<#([^>]+)>',           # Standard format: <#1>, <#1,2,3>
+            r'<#ID\s*(\d+)>',       # Format: <#ID 1>, <#ID 3>
+            r'<#\s*ID\s*(\d+)>',    # Format: <# ID 1>
+            r'<#(\d+)>',            # Simple format: <#1>
+            r'<#\s*(\d+)\s*>',      # Format with spaces: <# 1 >
+        ]
+        
+        def extract_numeric_id(citation_id: str) -> int:
+            """Extract numeric ID from various citation formats"""
+            if not citation_id:
+                return None
+                
+            # Remove common prefixes and suffixes
+            cleaned = citation_id.strip()
+            
+            # Handle various formats
+            if cleaned.upper().startswith('ID'):
+                cleaned = cleaned[2:].strip()
+            elif cleaned.startswith('#'):
+                cleaned = cleaned[1:].strip()
+                if cleaned.upper().startswith('ID'):
+                    cleaned = cleaned[2:].strip()
+            
+            # Remove any remaining non-numeric characters except spaces
+            import re
+            cleaned = re.sub(r'[^\d\s]', '', cleaned).strip()
+            
+            # Extract first number found
+            numbers = re.findall(r'\d+', cleaned)
+            if numbers:
+                return int(numbers[0])
+            
+            # Try direct conversion as fallback
+            try:
+                return int(cleaned)
+            except ValueError:
+                return None
         
         def replace_citation(match):
             citation_content = match.group(1)
@@ -441,29 +478,73 @@ class CookingTutorChatbot:
             
             urls = []
             for citation_id in citation_ids:
-                try:
-                    doc_id = int(citation_id)
-                    if doc_id in url_mapping:
-                        url = url_mapping[doc_id]
-                        urls.append(f'<{url}>')
-                        logger.info(f"[CITATION] Replacing <#{doc_id}> with {url}")
+                # Extract numeric ID from various formats
+                doc_id = extract_numeric_id(citation_id)
+                
+                if doc_id is not None and doc_id in url_mapping:
+                    url = url_mapping[doc_id]
+                    urls.append(f'<{url}>')
+                    logger.info(f"[CITATION] Replacing <#{citation_id}> with {url}")
+                else:
+                    if doc_id is None:
+                        logger.warning(f"[CITATION] Could not extract numeric ID from: {citation_id}")
                     else:
                         logger.warning(f"[CITATION] No URL mapping found for document ID {doc_id}")
-                        urls.append(f'<#{doc_id}>')  # Keep original if URL not found
-                except ValueError:
-                    logger.warning(f"[CITATION] Invalid citation ID: {citation_id}")
-                    urls.append(f'<#{citation_id}>')  # Keep original if invalid
+                    urls.append(f'<#{citation_id}>')  # Keep original if URL not found
             
             # Join multiple URLs with spaces
             return ' '.join(urls)
         
-        # Replace citations with URLs
-        processed_response = re.sub(citation_pattern, replace_citation, response)
+        # Process with each pattern
+        processed_response = response
+        total_citations_processed = 0
         
-        # Count total citations processed
-        citations_found = re.findall(citation_pattern, response)
-        total_citations = sum(len([id_str.strip() for id_str in citation_content.split(',')]) 
-                            for citation_content in citations_found)
+        for pattern in citation_patterns:
+            # Count citations before processing
+            citations_found = re.findall(pattern, processed_response)
+            if citations_found:
+                # Process citations with this pattern
+                processed_response = re.sub(pattern, replace_citation, processed_response)
+                total_citations_processed += sum(len([id_str.strip() for id_str in citation_content.split(',')]) 
+                                               for citation_content in citations_found)
+                logger.info(f"[CITATION] Processed {len(citations_found)} citation groups with pattern: {pattern}")
         
-        logger.info(f"[CITATION] Processed {total_citations} citations from {len(citations_found)} citation groups, {len(url_mapping)} URL mappings available")
+        # Fallback: Handle any remaining malformed citations
+        processed_response = self._handle_malformed_citations(processed_response, url_mapping)
+        
+        logger.info(f"[CITATION] Total citations processed: {total_citations_processed}, URL mappings available: {len(url_mapping)}")
         return processed_response
+    
+    def _handle_malformed_citations(self, text: str, url_mapping: Dict[int, str]) -> str:
+        """Handle any remaining malformed citations that didn't match our patterns"""
+        import re
+        
+        # Look for any remaining citation-like patterns
+        malformed_patterns = [
+            r'<#\s*ID\s*\d+\s*>',     # <# ID 1 >
+            r'<#\s*ID\s*\d+>',        # <# ID 1>
+            r'<#ID\s*\d+\s*>',        # <#ID 1 >
+            r'<#\s*\d+\s*ID\s*>',     # <# 1 ID >
+            r'<#\s*\d+\s*ID>',        # <# 1 ID>
+        ]
+        
+        def clean_malformed_citation(match):
+            citation_text = match.group(0)
+            # Extract any number from the citation
+            numbers = re.findall(r'\d+', citation_text)
+            if numbers:
+                doc_id = int(numbers[0])
+                if doc_id in url_mapping:
+                    url = url_mapping[doc_id]
+                    logger.info(f"[CITATION] Fixed malformed citation {citation_text} -> {url}")
+                    return f'<{url}>'
+                else:
+                    logger.warning(f"[CITATION] Malformed citation {citation_text} - no URL mapping for ID {doc_id}")
+            else:
+                logger.warning(f"[CITATION] Malformed citation {citation_text} - no number found")
+            return citation_text  # Keep original if can't fix
+        
+        for pattern in malformed_patterns:
+            text = re.sub(pattern, clean_malformed_citation, text)
+        
+        return text

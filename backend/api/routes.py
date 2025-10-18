@@ -356,7 +356,7 @@ async def root():
             <p class="subtitle">AI-Powered Cooking Lessons & Recipe Guidance</p>
             <p class="version">API Version 1.0.0</p>
             
-            <a href="/" class="redirect-btn" target="_blank">
+            <a href="https://cooking-tutor.vercel.app" class="redirect-btn" target="_blank">
                 <i class="fas fa-external-link-alt"></i>
                 Open Frontend
             </a>
