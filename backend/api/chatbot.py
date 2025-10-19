@@ -586,8 +586,8 @@ class CookingTutorChatbot:
                 doc_id = extract_numeric_id(citation_id)
                 
                 if doc_id is not None and doc_id in url_mapping:
-                        url = url_mapping[doc_id]
-                        urls.append(f'<{url}>')
+                    url = url_mapping[doc_id]
+                    urls.append(f'<{url}>')
                     logger.info(f"[CITATION] Replacing <#{citation_id}> with {url}")
                 else:
                     if doc_id is None:
