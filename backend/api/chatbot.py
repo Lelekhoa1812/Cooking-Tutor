@@ -18,7 +18,7 @@ class GeminiClient:
             logger.warning("FlashAPI not set - Gemini client will use fallback responses")
             self.client = None
         else:
-        self.client = genai.Client(api_key=gemini_flash_api_key)
+            self.client = genai.Client(api_key=gemini_flash_api_key)
     
     def generate_content(self, prompt: str, model: str = "gemini-2.5-flash", temperature: float = 0.7) -> str:
         """Generate content using Gemini API"""
