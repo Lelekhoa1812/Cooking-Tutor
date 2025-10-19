@@ -88,37 +88,57 @@ class ImageSearchEngine:
             'query': final_dish_query,
             'context': 'final_dish',
             'type': 'final_dish',
-            'max_results': max(1, num_results // 3)
+            'max_results': max(2, num_results // 4)  # More final dish images
         })
         
-        # 2. Ingredients query - more specific
+        # 2. Ingredients query - more specific and diverse
         if any(keyword in query_lower for keyword in ['pad thai', 'noodles', 'pasta']):
             ingredients_query = f"pad thai ingredients rice noodles shrimp"
+            ingredients_query2 = f"pad thai fresh vegetables herbs"
         elif any(keyword in query_lower for keyword in ['fusion', 'western']):
             ingredients_query = f"fusion cooking ingredients fresh"
+            ingredients_query2 = f"western cooking ingredients vegetables"
         else:
             ingredients_query = f"{clean_query} ingredients fresh"
+            ingredients_query2 = f"{clean_query} raw ingredients vegetables"
         
         queries.append({
             'query': ingredients_query,
             'context': 'ingredients',
             'type': 'ingredients',
-            'max_results': max(1, num_results // 3)
+            'max_results': max(2, num_results // 4)  # More ingredient images
+        })
+        
+        queries.append({
+            'query': ingredients_query2,
+            'context': 'ingredients',
+            'type': 'ingredients',
+            'max_results': max(1, num_results // 6)  # Additional ingredient variety
         })
         
         # 3. Cooking technique/process query - more specific
         if any(keyword in query_lower for keyword in ['pad thai', 'noodles', 'pasta']):
             technique_query = f"pad thai cooking technique wok stir fry"
+            technique_query2 = f"pad thai preparation cooking process"
         elif any(keyword in query_lower for keyword in ['fusion', 'western']):
             technique_query = f"fusion cooking technique western"
+            technique_query2 = f"fusion cooking preparation method"
         else:
             technique_query = f"{clean_query} cooking technique"
+            technique_query2 = f"{clean_query} preparation method"
         
         queries.append({
             'query': technique_query,
             'context': 'technique',
             'type': 'technique',
-            'max_results': max(1, num_results // 3)
+            'max_results': max(2, num_results // 4)  # More technique images
+        })
+        
+        queries.append({
+            'query': technique_query2,
+            'context': 'technique',
+            'type': 'technique',
+            'max_results': max(1, num_results // 6)  # Additional technique variety
         })
         
         return queries
@@ -140,23 +160,32 @@ class ImageSearchEngine:
             else:
                 type_groups['other'].append(result)
         
-        # Select diverse results
+        # Select diverse results with emphasis on ingredients and techniques
         diverse_results = []
         
-        # Prioritize: 1 final dish, 1 ingredients, 1 technique, then fill with others
-        if type_groups['final_dish']:
-            diverse_results.append(type_groups['final_dish'][0])
-        if type_groups['ingredients'] and len(diverse_results) < num_results:
-            diverse_results.append(type_groups['ingredients'][0])
-        if type_groups['technique'] and len(diverse_results) < num_results:
-            diverse_results.append(type_groups['technique'][0])
+        # Prioritize: 2 ingredients, 2 techniques, 2 final dishes for better diversity
+        for _ in range(2):  # Get 2 of each type
+            if type_groups['ingredients'] and len(diverse_results) < num_results:
+                diverse_results.append(type_groups['ingredients'].pop(0))
+            if type_groups['technique'] and len(diverse_results) < num_results:
+                diverse_results.append(type_groups['technique'].pop(0))
+            if type_groups['final_dish'] and len(diverse_results) < num_results:
+                diverse_results.append(type_groups['final_dish'].pop(0))
         
         # Fill remaining slots with other results
         all_remaining = []
         for group in type_groups.values():
-            all_remaining.extend(group[1:])  # Skip first item (already used)
+            all_remaining.extend(group)  # Include all remaining results
+        
+        # Sort by quality score if available
+        all_remaining.sort(key=lambda x: x.get('quality_score', 0), reverse=True)
         
         diverse_results.extend(all_remaining[:num_results - len(diverse_results)])
+        
+        logger.info(f"Prioritized {len(diverse_results)} diverse images: "
+                   f"ingredients={len([r for r in diverse_results if r.get('image_type') == 'ingredients'])}, "
+                   f"technique={len([r for r in diverse_results if r.get('image_type') == 'technique'])}, "
+                   f"final_dish={len([r for r in diverse_results if r.get('image_type') == 'final_dish'])}")
         
         return diverse_results[:num_results]
     

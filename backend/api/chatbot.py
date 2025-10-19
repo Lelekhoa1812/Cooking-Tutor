@@ -18,7 +18,7 @@ class GeminiClient:
             logger.warning("FlashAPI not set - Gemini client will use fallback responses")
             self.client = None
         else:
-            self.client = genai.Client(api_key=gemini_flash_api_key)
+        self.client = genai.Client(api_key=gemini_flash_api_key)
     
     def generate_content(self, prompt: str, model: str = "gemini-2.5-flash", temperature: float = 0.7) -> str:
         """Generate content using Gemini API"""
@@ -205,8 +205,8 @@ class CookingTutorChatbot:
             images = source_aggregation['images']
             if images:
                 logger.info(f"Found {len(images)} images from search")
-                # Create enhanced image data with better frontend integration
-                enhanced_images = self._enhance_images_for_frontend(images[:3], user_query)
+                # Create enhanced image data with better frontend integration - get more images
+                enhanced_images = self._enhance_images_for_frontend(images[:6], user_query)
                 response_data['images'] = enhanced_images
                 
                 # Create structured content with image placement suggestions
@@ -446,7 +446,7 @@ class CookingTutorChatbot:
         return ''.join(enhanced_sections)
     
     def _create_structured_content(self, text: str, images: List[Dict]) -> List[Dict]:
-        """Create structured content blocks for optimal frontend rendering"""
+        """Create structured content blocks for optimal frontend rendering with inline image placement"""
         if not images:
             return [{'type': 'text', 'content': text}]
         
@@ -457,48 +457,83 @@ class CookingTutorChatbot:
         image_index = 0
         
         for section in sections:
-            # Add text section
-            structured_blocks.append({
-                'type': 'text',
-                'content': section['content'].strip(),
-                'section_type': section['type']
-            })
+            # Split section content into paragraphs for better inline placement
+            paragraphs = section['content'].strip().split('\n\n')
             
-            # Check if we should add an image after this section
-            if image_index < len(images):
-                image = images[image_index]
-                placement_context = image['placement_context']
-                
-                should_add_image = (
-                    (section['type'] == 'ingredients' and placement_context == 'after_ingredients') or
-                    (section['type'] == 'instructions' and placement_context == 'after_instructions') or
-                    (section['type'] == 'tips' and placement_context == 'after_tips') or
-                    (section['type'] == 'intro' and placement_context == 'after_intro')
-                )
-                
-                if should_add_image:
+            for i, paragraph in enumerate(paragraphs):
+                if paragraph.strip():
+                    # Add paragraph as text block
                     structured_blocks.append({
-                        'type': 'image',
-                        'image_data': image,
-                        'placement': 'after_section',
+                        'type': 'text',
+                        'content': paragraph.strip(),
                         'section_type': section['type']
                     })
-                    image_index += 1
+                    
+                    # Check if we should add an image after this paragraph
+                    if image_index < len(images):
+                        image = images[image_index]
+                        placement_context = image['placement_context']
+                        
+                        # More aggressive inline placement
+                        should_add_image = (
+                            # Add images more frequently for better visual flow
+                            (section['type'] == 'ingredients' and placement_context == 'after_ingredients' and i == 0) or
+                            (section['type'] == 'instructions' and placement_context == 'after_instructions' and i == 0) or
+                            (section['type'] == 'tips' and placement_context == 'after_tips' and i == 0) or
+                            (section['type'] == 'intro' and placement_context == 'after_intro' and i == 0) or
+                            # Add images between paragraphs for better distribution
+                            (i == 1 and image_index < len(images) - 1) or  # Second paragraph gets an image
+                            (i == 2 and image_index < len(images) - 2)     # Third paragraph gets an image
+                        )
+                        
+                        if should_add_image:
+                            structured_blocks.append({
+                                'type': 'image',
+                                'image_data': image,
+                                'placement': 'inline',
+                                'section_type': section['type']
+                            })
+                            image_index += 1
         
-        # Add any remaining images at the end
+        # Add any remaining images at strategic points
         while image_index < len(images):
             image = images[image_index]
             structured_blocks.append({
                 'type': 'image',
                 'image_data': image,
-                'placement': 'end'
+                'placement': 'inline'
             })
             image_index += 1
         
         return structured_blocks
     
+    def _remove_image_urls_from_text(self, text: str) -> str:
+        """Remove image URLs from text to prevent them from being processed as citations"""
+        import re
+        
+        # Remove common image URL patterns that might appear in text
+        image_url_patterns = [
+            r'https?://[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?',  # Direct image URLs
+            r'<img[^>]*src=["\']([^"\']+)["\'][^>]*>',  # HTML img tags
+            r'!\[[^\]]*\]\([^)]+\)',  # Markdown image syntax
+        ]
+        
+        cleaned_text = text
+        for pattern in image_url_patterns:
+            cleaned_text = re.sub(pattern, '', cleaned_text, flags=re.IGNORECASE)
+        
+        # Clean up any extra whitespace left behind
+        cleaned_text = re.sub(r'\n\s*\n\s*\n', '\n\n', cleaned_text)
+        cleaned_text = cleaned_text.strip()
+        
+        return cleaned_text
+    
     def _process_citations(self, response: str, url_mapping: Dict[int, str]) -> str:
         """Replace citation tags with actual URLs, handling various citation formats flexibly"""
+        
+        # First, remove any image URLs from the response to prevent them from being processed as citations
+        # This prevents image URLs from appearing as citations in the text
+        response = self._remove_image_urls_from_text(response)
         
         # More flexible pattern to match various citation formats
         citation_patterns = [
@@ -551,8 +586,8 @@ class CookingTutorChatbot:
                 doc_id = extract_numeric_id(citation_id)
                 
                 if doc_id is not None and doc_id in url_mapping:
-                    url = url_mapping[doc_id]
-                    urls.append(f'<{url}>')
+                        url = url_mapping[doc_id]
+                        urls.append(f'<{url}>')
                     logger.info(f"[CITATION] Replacing <#{citation_id}> with {url}")
                 else:
                     if doc_id is None:
