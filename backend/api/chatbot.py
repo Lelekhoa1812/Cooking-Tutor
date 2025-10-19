@@ -513,17 +513,41 @@ class CookingTutorChatbot:
         
         # Remove common image URL patterns that might appear in text
         image_url_patterns = [
-            r'https?://[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?',  # Direct image URLs
-            r'<img[^>]*src=["\']([^"\']+)["\'][^>]*>',  # HTML img tags
-            r'!\[[^\]]*\]\([^)]+\)',  # Markdown image syntax
+            # Direct image file extensions
+            r'https?://[^\s]+\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)(\?[^\s]*)?',
+            
+            # Bing image URLs (like the one provided)
+            r'https?://tse\d+\.mm\.bing\.net/[^\s]+',
+            
+            # Google image URLs
+            r'https?://encrypted-tbn\d+\.gstatic\.com/[^\s]+',
+            r'https?://images\d+\.googleusercontent\.com/[^\s]+',
+            
+            # Other common image hosting services
+            r'https?://[^\s]*imgur[^\s]*\.(jpg|jpeg|png|gif|webp)',
+            r'https?://[^\s]*unsplash[^\s]*\.(jpg|jpeg|png|gif|webp)',
+            r'https?://[^\s]*pixabay[^\s]*\.(jpg|jpeg|png|gif|webp)',
+            
+            # HTML img tags
+            r'<img[^>]*src=["\']([^"\']+)["\'][^>]*>',
+            
+            # Markdown image syntax
+            r'!\[[^\]]*\]\([^)]+\)',
+            
+            # URLs with image-related parameters
+            r'https?://[^\s]*\?(.*&)?(w=\d+|h=\d+|c=\d+|r=\d+|o=\d+|cb=\d+|pid=\d+|rm=\d+)(&.*)?',
         ]
         
         cleaned_text = text
         for pattern in image_url_patterns:
             cleaned_text = re.sub(pattern, '', cleaned_text, flags=re.IGNORECASE)
         
+        # Remove standalone URLs that start with @ (like @https://...)
+        cleaned_text = re.sub(r'@https?://[^\s]+', '', cleaned_text)
+        
         # Clean up any extra whitespace left behind
         cleaned_text = re.sub(r'\n\s*\n\s*\n', '\n\n', cleaned_text)
+        cleaned_text = re.sub(r'\s+', ' ', cleaned_text)  # Replace multiple spaces with single space
         cleaned_text = cleaned_text.strip()
         
         return cleaned_text
